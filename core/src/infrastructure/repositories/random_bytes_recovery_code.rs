@@ -1,48 +1,49 @@
-use crate::domain::trident::ports::MfaRecoveryCodeRepository;
 use crate::domain::trident::entities::MfaRecoveryCode;
+use crate::domain::trident::ports::{RecoveryCodeFormatter, RecoveryCodeRepository};
 use rand::prelude::*;
+use std::marker::PhantomData;
 
+/// MFA code of L bytes generated randomly.
+/// You generally don't want to use this directly but rather variants of RecoveryCodeRepoAny
+/// as different byte length/formatter combos aren't always user friendly for display
 #[derive(Clone)]
-pub struct RandBytesMfaRecoveryCodeRepository<const L: usize>;
+pub struct RandBytesRecoveryCodeRepository<const L: usize, F: RecoveryCodeFormatter> {
+    _phantom: PhantomData<F>,
+}
 
-impl<const L: usize> MfaRecoveryCodeRepository for RandBytesMfaRecoveryCodeRepository<L> {
+impl<const L: usize, F: RecoveryCodeFormatter> RandBytesRecoveryCodeRepository<L, F> {
+    fn new() -> Self {
+        RandBytesRecoveryCodeRepository {
+            _phantom: PhantomData::<F>,
+        }
+    }
+}
+
+/// Encodes MFA code as Z-B32 with a '-' separator every 4 characters.
+/// e.g: abcd-efgh-ijkl-mnop for byte length of 10
+///
+/// You generally want to use this formatter with multiple of 5 byte lengths (5, 10, 15, etc.)
+/// as 5 bytes = 8 character in this encoding.
+///
+/// If the resulting string can't be separated into equal chunks, the last chunk will be left
+/// incomplete
+#[derive(Clone)]
+pub struct B32Split4RecoveryCodeFormatter;
+
+impl<const L: usize, F> RecoveryCodeRepository for RandBytesRecoveryCodeRepository<L, F>
+where
+    F: RecoveryCodeFormatter,
+{
     fn generate_recovery_code(&self) -> MfaRecoveryCode {
         let mut rng = rand::thread_rng();
         let mut bytes = [0u8; L];
-        rng.try_fill_bytes(&mut bytes).expect("Thread rng failed to fill byte slice");
+        rng.try_fill_bytes(&mut bytes)
+            .expect("Thread rng failed to fill byte slice");
         MfaRecoveryCode::from_bytes(&bytes)
     }
 
     fn to_string(&self, code: &MfaRecoveryCode) -> String {
-        // Depending on what the length is a multiple of,
-        // we can split the string representation in different chunks
-        // separated by a "-" for human readability
-
-        let length = L as usize;
-        let mut num_parts = 1;
-        let mut part_len = length;
-        if length % 5 == 0 {
-            num_parts = part_len / 5;
-            part_len = 5;
-        } else if length % 4 == 0 {
-            num_parts = part_len / 4;
-            part_len = 4;
-        }
-
-        let mut s = String::with_capacity(length + num_parts - 1);
-        for i in 0..num_parts {
-            let b32enc = base32::encode(
-                base32::Alphabet::Rfc4648Lower { padding: false }, 
-                &code.0[part_len*i..part_len*(i+1)]
-            );
-            if i == num_parts-1 {
-                s.push_str(b32enc.as_str());
-            } else {
-                s.push_str(b32enc.as_str());
-                s.push('-')
-            }
-        }
-        s
+        F::format(&code)
     }
 
     fn verify_recovery_code(&self, hash: &[u8], code: &MfaRecoveryCode) -> bool {
@@ -50,16 +51,44 @@ impl<const L: usize> MfaRecoveryCodeRepository for RandBytesMfaRecoveryCodeRepos
     }
 }
 
+impl RecoveryCodeFormatter for B32Split4RecoveryCodeFormatter {
+    fn format(code: &MfaRecoveryCode) -> String {
+        const SEPARATOR_STEP: usize = 4;
+
+        let mut s = base32::encode(base32::Alphabet::Z, code.0.as_slice());
+        let n_chars = s.chars().count();
+
+        if n_chars % SEPARATOR_STEP == 0 {
+            s.reserve(n_chars / SEPARATOR_STEP);
+        } else {
+            s.reserve(n_chars / SEPARATOR_STEP + 1);
+        }
+
+        for i in (SEPARATOR_STEP..n_chars).step_by(SEPARATOR_STEP + 1) {
+            s.insert(i, '-');
+        }
+
+        s
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    type DefaultFormatter = B32Split4RecoveryCodeFormatter;
+
     #[test]
-    fn test_generate_random_bytes_recovery_code() {
-        let repo = RandBytesMfaRecoveryCodeRepository::<10>;
+    fn test_random_bytes_recovery_code_generate() {
+        let repo = RandBytesRecoveryCodeRepository::<10, DefaultFormatter>::new();
         let code = repo.generate_recovery_code();
-        assert_eq!(code.0.len(), 10,
+        assert_eq!(
+            code.0.len(),
+            10,
             "The generated code length doesn't match the generic parameter"
         );
     }
+
+    #[test]
+    fn test_random_bytes_recovery_code_string_convertion() {}
 }
