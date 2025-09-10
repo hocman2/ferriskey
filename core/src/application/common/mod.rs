@@ -161,7 +161,7 @@ impl CoreService for FerriskeyService {
             Ok(Some(_)) => {
                 tracing::info!("{} already exists", config.master_realm_name);
                 Err(CoreError::InvalidRealm)?
-            },
+            }
             Err(e) => Err(e)?,
             Ok(None) => {
                 tracing::info!("creating master realm");
