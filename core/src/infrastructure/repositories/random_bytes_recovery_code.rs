@@ -56,19 +56,17 @@ impl RecoveryCodeFormatter for B32Split4RecoveryCodeFormatter {
         const SEPARATOR_STEP: usize = 4;
 
         let mut s = base32::encode(base32::Alphabet::Z, code.0.as_slice());
-        let n_chars = s.chars().count();
+        let mut n_chars = s.chars().count();
 
-        if n_chars % SEPARATOR_STEP == 0 {
-            s.reserve(n_chars / SEPARATOR_STEP);
-        } else {
-            s.reserve(n_chars / SEPARATOR_STEP + 1);
+        let mut out = String::with_capacity(n_chars + n_chars / SEPARATOR_STEP); 
+        for (i,c) in s.chars().enumerate() {
+            if i > 0 && i % SEPARATOR_STEP == 0 {
+                out.push('-');
+            }
+            out.push(c);
         }
 
-        for i in (SEPARATOR_STEP..n_chars).step_by(SEPARATOR_STEP + 1) {
-            s.insert(i, '-');
-        }
-
-        s
+        out
     }
 }
 
@@ -90,5 +88,19 @@ mod tests {
     }
 
     #[test]
-    fn test_random_bytes_recovery_code_string_convertion() {}
+    fn test_random_bytes_recovery_code_string_convertion() {
+        // This test is incomplete as it only validates the format of the output, not its content
+        let repo_a = RandBytesRecoveryCodeRepository::<10, B32Split4RecoveryCodeFormatter>::new();
+        let mut code = MfaRecoveryCode([0u8;10].to_vec());
+        assert_eq!("yyyy-yyyy-yyyy-yyyy", repo_a.to_string(&code),
+            "The output formats don't match"
+        );
+
+        // Test on non-perfect byte length 
+        let repo_b = RandBytesRecoveryCodeRepository::<11, B32Split4RecoveryCodeFormatter>::new();
+        code = MfaRecoveryCode([0u8;11].to_vec());
+        assert_eq!("yyyy-yyyy-yyyy-yyyy-yy", repo_b.to_string(&code),
+            "The output formats don't match"
+        );
+    }
 }
