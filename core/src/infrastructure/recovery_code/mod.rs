@@ -1,3 +1,5 @@
+use crate::domain::common::entities::app_errors::CoreError;
+use crate::domain::credential::entities::Credential;
 use crate::domain::trident::entities::MfaRecoveryCode;
 use crate::domain::trident::ports::RecoveryCodeRepository;
 use crate::infrastructure::repositories::random_bytes_recovery_code::{
@@ -22,7 +24,15 @@ impl RecoveryCodeRepository for RecoveryCodeRepoAny {
         }
     }
 
-    fn verify_recovery_code(&self, hash: &[u8], code: &MfaRecoveryCode) -> bool {
-        return false;
+    async fn verify_recovery_code(
+        &self,
+        in_code: String,
+        against: Credential,
+    ) -> Result<bool, CoreError> {
+        match self {
+            RecoveryCodeRepoAny::RandomBytes10(repo) => {
+                repo.verify_recovery_code(in_code, against).await
+            }
+        }
     }
 }

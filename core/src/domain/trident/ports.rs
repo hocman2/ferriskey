@@ -1,8 +1,10 @@
 use uuid::Uuid;
 
 use crate::domain::{
-    authentication::value_objects::Identity, common::entities::app_errors::CoreError,
-    trident::entities::TotpSecret,
+    authentication::value_objects::Identity,
+    common::entities::app_errors::CoreError,
+    credential::entities::Credential,
+    trident::entities::{MfaRecoveryCode, TotpError, TotpSecret},
 };
 
 pub trait TotpService: Send + Sync + Clone + 'static {
@@ -47,12 +49,17 @@ pub struct VerifyOtpOutput {
 
 pub trait RecoveryCodeRepository: Send + Sync + Clone + 'static {
     fn generate_recovery_code(&self) -> MfaRecoveryCode;
-    fn verify_recovery_code(&self, hash: &[u8], code: &MfaRecoveryCode) -> bool;
+    fn verify_recovery_code(
+        &self,
+        in_code: String,
+        against: Credential,
+    ) -> impl Future<Output = Result<bool, CoreError>> + Send;
     fn to_string(&self, code: &MfaRecoveryCode) -> String;
 }
 
 pub trait RecoveryCodeFormatter: Send + Sync + Clone + 'static {
     fn format(code: &MfaRecoveryCode) -> String;
+    fn decode(code: String) -> Result<MfaRecoveryCode, CoreError>;
 }
 
 pub trait TridentService: Send + Sync + Clone + 'static {
