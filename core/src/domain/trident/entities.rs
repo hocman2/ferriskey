@@ -47,10 +47,10 @@ impl TotpSecret {
 }
 
 #[derive(Debug)]
-pub struct MfaRecoveryCode(Vec<u8>);
+pub struct MfaRecoveryCode(pub Vec<u8>);
 
 impl MfaRecoveryCode {
-    pub fn from_bytes(bytes: Vec<u8>) {
-        MfaRecoveryCode(bytes)
+    pub fn from_bytes(bytes: &[u8]) -> MfaRecoveryCode {
+        MfaRecoveryCode(bytes.to_vec())
     }
 }
