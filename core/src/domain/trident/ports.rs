@@ -3,7 +3,7 @@ use uuid::Uuid;
 use crate::domain::{
     authentication::value_objects::Identity,
     common::entities::app_errors::CoreError,
-    trident::entities::{TotpError, TotpSecret},
+    trident::entities::{MfaRecoveryCode, TotpError, TotpSecret},
 };
 
 pub trait TotpService: Send + Sync + Clone + 'static {
@@ -44,6 +44,12 @@ pub struct VerifyOtpInput {
 pub struct VerifyOtpOutput {
     pub message: String,
     pub user_id: Uuid,
+}
+
+pub trait MfaRecoveryCodeRepository: Send + Sync + Clone + 'static {
+    fn generate_recovery_code(&self) -> MfaRecoveryCode;
+    fn to_string(&self, code: &MfaRecoveryCode) -> String;
+    fn verify_recovery_code(&self, hash: &[u8], code: &MfaRecoveryCode) -> bool;
 }
 
 pub trait TridentService: Send + Sync + Clone + 'static {
