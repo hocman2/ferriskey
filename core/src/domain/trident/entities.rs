@@ -45,3 +45,12 @@ impl TotpSecret {
         Ok(bytes)
     }
 }
+
+#[derive(Debug)]
+pub struct MfaRecoveryCode(Vec<u8>);
+
+impl MfaRecoveryCode {
+    pub fn from_bytes(bytes: Vec<u8>) {
+        MfaRecoveryCode(bytes)
+    }
+}

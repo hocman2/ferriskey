@@ -45,6 +45,12 @@ pub struct VerifyOtpOutput {
     pub user_id: Uuid,
 }
 
+pub trait MfaRecoveryCodeRepository: Send + Sync + Clone + 'static {
+    fn generate_recovery_code(&self) -> MfaRecoveryCode;
+    fn to_string(&self, code: &MfaRecoveryCode) -> String;
+    fn verify_recovery_code(&self, hash: &[u8], code: &MfaRecoveryCode) -> bool;
+}
+
 pub trait TridentService: Send + Sync + Clone + 'static {
     fn challenge_otp(
         &self,
