@@ -45,10 +45,14 @@ pub struct VerifyOtpOutput {
     pub user_id: Uuid,
 }
 
-pub trait MfaRecoveryCodeRepository: Send + Sync + Clone + 'static {
+pub trait RecoveryCodeRepository: Send + Sync + Clone + 'static {
     fn generate_recovery_code(&self) -> MfaRecoveryCode;
-    fn to_string(&self, code: &MfaRecoveryCode) -> String;
     fn verify_recovery_code(&self, hash: &[u8], code: &MfaRecoveryCode) -> bool;
+    fn to_string(&self, code: &MfaRecoveryCode) -> String;
+}
+
+pub trait RecoveryCodeFormatter: Send + Sync + Clone + 'static {
+    fn format(code: &MfaRecoveryCode) -> String;
 }
 
 pub trait TridentService: Send + Sync + Clone + 'static {
