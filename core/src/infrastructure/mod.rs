@@ -7,6 +7,7 @@ pub mod hasher;
 pub mod health;
 pub mod jwt;
 pub mod realm;
+pub mod recovery_code;
 pub mod refresh_token;
 pub mod repositories;
 pub mod role;
