@@ -23,6 +23,11 @@ impl RecoveryCodeRepository for RecoveryCodeRepoAny {
             RecoveryCodeRepoAny::RandomBytes10(repo) => repo.to_string(&code),
         }
     }
+    fn from_string(&self, code: String) -> Result<MfaRecoveryCode, CoreError> {
+        match self {
+            RecoveryCodeRepoAny::RandomBytes10(repo) => repo.from_string(code),
+        }
+    }
 
     async fn verify_recovery_code(
         &self,

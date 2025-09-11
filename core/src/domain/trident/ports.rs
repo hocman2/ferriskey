@@ -49,12 +49,21 @@ pub struct VerifyOtpOutput {
 
 pub trait RecoveryCodeRepository: Send + Sync + Clone + 'static {
     fn generate_recovery_code(&self) -> MfaRecoveryCode;
+    fn generate_n_recovery_code(&self, n: usize) -> Vec<MfaRecoveryCode> {
+        let mut out = Vec::<MfaRecoveryCode>::with_capacity(n);
+        for _ in 0..n {
+            out.push(self.generate_recovery_code());
+        }
+        out
+    }
+
     fn verify_recovery_code(
         &self,
         in_code: String,
         against: Credential,
     ) -> impl Future<Output = Result<bool, CoreError>> + Send;
     fn to_string(&self, code: &MfaRecoveryCode) -> String;
+    fn from_string(&self, code: String) -> Result<MfaRecoveryCode, CoreError>;
 }
 
 pub trait RecoveryCodeFormatter: Send + Sync + Clone + 'static {

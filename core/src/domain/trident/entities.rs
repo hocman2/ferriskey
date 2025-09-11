@@ -46,7 +46,7 @@ impl TotpSecret {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct MfaRecoveryCode(pub Vec<u8>);
 
 impl MfaRecoveryCode {
