@@ -29,14 +29,25 @@ impl RecoveryCodeRepository for RecoveryCodeRepoAny {
         }
     }
 
-    async fn verify_recovery_code(
+    async fn secure_for_storage(
+        &self, 
+        code: &MfaRecoveryCode
+    ) -> Result<String, CoreError> {
+        match self {
+            RecoveryCodeRepoAny::RandomBytes10(repo) => {
+                repo.secure_for_storage(&code).await
+            }
+        }
+    }
+
+    async fn verify(
         &self,
         in_code: String,
         against: Credential,
     ) -> Result<bool, CoreError> {
         match self {
             RecoveryCodeRepoAny::RandomBytes10(repo) => {
-                repo.verify_recovery_code(in_code, against).await
+                repo.verify(in_code, against).await
             }
         }
     }

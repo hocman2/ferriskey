@@ -47,6 +47,22 @@ pub struct VerifyOtpOutput {
     pub user_id: Uuid,
 }
 
+pub struct GenerateRecoveryCodeInput {
+    pub amount: usize,
+    pub authorization: String,
+}
+
+pub struct GenerateRecoveryCodeOutput {
+    pub codes: Vec<String>
+}
+
+pub struct BurnRecoveryCodeInput {
+    pub code: String,
+}
+
+pub struct BurnRecoveryCodeOutput {
+}
+
 pub trait RecoveryCodeRepository: Send + Sync + Clone + 'static {
     fn generate_recovery_code(&self) -> MfaRecoveryCode;
     fn generate_n_recovery_code(&self, n: usize) -> Vec<MfaRecoveryCode> {
@@ -57,12 +73,23 @@ pub trait RecoveryCodeRepository: Send + Sync + Clone + 'static {
         out
     }
 
-    fn verify_recovery_code(
+    /// Returns a string safe for long term storage
+    /// Generally this is just hashing the code using an internal hasher
+    fn secure_for_storage(
+        &self,
+        code: &MfaRecoveryCode
+    ) -> impl Future<Output = Result<String, CoreError>> + Send;
+
+    /// Compares the given human-readable formatted code against a stored credential
+    fn verify(
         &self,
         in_code: String,
         against: Credential,
     ) -> impl Future<Output = Result<bool, CoreError>> + Send;
+
+    /// Formats the code in human-readable format
     fn to_string(&self, code: &MfaRecoveryCode) -> String;
+    /// Decodes a human-readable formatted code into an MfaRecoveryCode
     fn from_string(&self, code: String) -> Result<MfaRecoveryCode, CoreError>;
 }
 
@@ -72,6 +99,16 @@ pub trait RecoveryCodeFormatter: Send + Sync + Clone + 'static {
 }
 
 pub trait TridentService: Send + Sync + Clone + 'static {
+    fn generate_recovery_code(
+        &self,
+        identity: Identity,
+        input: GenerateRecoveryCodeInput,
+    ) -> impl Future<Output = Result<GenerateRecoveryCodeOutput, CoreError>> + Send;
+    fn burn_recovery_code(
+        &self,
+        identity: Identity,
+        input: BurnRecoveryCodeInput,
+    ) -> impl Future<Output = Result<BurnRecoveryCodeOutput, CoreError>> + Send;
     fn challenge_otp(
         &self,
         identity: Identity,
