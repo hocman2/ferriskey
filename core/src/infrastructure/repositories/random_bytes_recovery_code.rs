@@ -55,7 +55,14 @@ where
         F::decode(code)
     }
 
-    async fn verify_recovery_code(
+    async fn secure_for_storage(
+        &self,
+        code: &MfaRecoveryCode,
+    ) -> Result<String, CoreError> {
+        Ok("".to_string())
+    }
+
+    async fn verify(
         &self,
         in_code: String,
         against: Credential,

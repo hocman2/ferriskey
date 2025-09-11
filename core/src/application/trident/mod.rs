@@ -13,10 +13,12 @@ use crate::{
         credential::ports::CredentialRepository,
         crypto::ports::HasherRepository,
         trident::{
-            entities::TotpSecret,
+            entities::{TotpSecret, MfaRecoveryCode},
             ports::{
                 ChallengeOtpInput, ChallengeOtpOutput, SetupOtpInput, SetupOtpOutput,
                 TridentService, UpdatePasswordInput, VerifyOtpInput, VerifyOtpOutput,
+                GenerateRecoveryCodeInput, GenerateRecoveryCodeOutput,
+                BurnRecoveryCodeInput, BurnRecoveryCodeOutput,
             },
         },
         user::{entities::RequiredAction, ports::UserRequiredActionRepository},
@@ -97,6 +99,75 @@ fn verify(secret: &TotpSecret, code: &str) -> Result<bool, CoreError> {
 }
 
 impl TridentService for FerriskeyService {
+    async fn generate_recovery_code(
+        &self,
+        identity: Identity,
+        input: GenerateRecoveryCodeInput
+    ) -> Result<GenerateRecoveryCodeOutput, CoreError> {
+        let user = match identity {
+            Identity::User(user) => user,
+            _ => return Err(CoreError::Forbidden("is not user".to_string())),
+        };
+
+        if false /* && input.authorization */ {
+           return Err(CoreError::Forbidden("Authorization code is invalid".to_string())); 
+        }
+
+        let mut codes = Vec::<MfaRecoveryCode>::with_capacity(input.amount);
+
+        for _ in 1..=input.amount {
+            codes.push(self.recovery_code_repo.generate_code());
+        }
+
+        codes
+            .into_iter()
+            .map(|code| 
+                self.recovery_code_repo.format_for_storage(&code)
+            )
+            .try_for_each(|code| {
+                let code = code?;
+                // <D-v> 
+                // Method is certainly not optimized for batch insert
+                self.credential_repository
+                    .create_credential(
+                        user.id,
+                        "recovery-code".to_string(),
+                        code,
+                        "".into(),
+                        false
+                    );
+
+                Ok(())
+            })
+            .map_err(|e| {
+                tracing::error!("{e}");
+                CoreError::InternalServerError
+            })?;
+        
+        let codes = codes
+            .into_iter()
+            .map(|c| self.recovery_code_repo.to_string(&c))
+            .collect::<Vec<String>>();
+
+        Ok(GenerateRecoveryCodeOutput {
+            codes,
+        })
+    }
+
+    async fn burn_recovery_code(
+        &self,
+        identity: Identity,
+        input: BurnRecoveryCodeInput
+    ) -> Result<BurnRecoveryCodeOutput, CoreError> {
+        // Get user creds
+        // filter by type "recovery-code"
+        
+        // Look for a match
+        // If good, give authorzation token and invalidate code
+        Ok(BurnRecoveryCodeOutput {
+        })
+    }
+    
     async fn challenge_otp(
         &self,
         identity: Identity,
