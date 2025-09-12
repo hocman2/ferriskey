@@ -11,11 +11,13 @@ use crate::infrastructure::health::repositories::PostgresHealthCheckRepository;
 use crate::infrastructure::jwt::KeyStoreRepoAny;
 use crate::infrastructure::realm::repositories::RealmRepoAny;
 use crate::infrastructure::realm::repositories::realm_postgres_repository::PostgresRealmRepository;
+use crate::infrastructure::recovery_code::RecoveryCodeRepoAny;
 use crate::infrastructure::refresh_token::RefreshTokenRepoAny;
 use crate::infrastructure::repositories::argon2_hasher::Argon2HasherRepository;
 use crate::infrastructure::repositories::auth_session_repository::PostgresAuthSessionRepository;
 use crate::infrastructure::repositories::credential_repository::PostgresCredentialRepository;
 use crate::infrastructure::repositories::keystore_repository::PostgresKeyStoreRepository;
+use crate::infrastructure::repositories::random_bytes_recovery_code::RandBytesRecoveryCodeRepository;
 use crate::infrastructure::repositories::refresh_token_repository::PostgresRefreshTokenRepository;
 use crate::infrastructure::role::repositories::RoleRepoAny;
 use crate::infrastructure::role::repositories::role_postgres_repository::PostgresRoleRepository;
@@ -48,8 +50,9 @@ pub struct RepoBundle {
     pub credential_repository: CredentialRepoAny,
     pub hasher_repository: HasherRepoAny,
     pub auth_session_repository: AuthSessionRepoAny,
-    pub refresh_token_repository: RefreshTokenRepoAny,
+    pub recovery_code_repository: RecoveryCodeRepoAny,
     pub redirect_uri_repository: RedirectUriRepoAny,
+    pub refresh_token_repository: RefreshTokenRepoAny,
     pub role_repository: RoleRepoAny,
     pub keystore_repository: KeyStoreRepoAny,
     pub user_role_repository: UserRoleRepoAny,
@@ -74,10 +77,12 @@ pub async fn build_repos_from_env(cfg: AppConfig) -> Result<RepoBundle, anyhow::
     let hasher_repository = HasherRepoAny::Argon2(Argon2HasherRepository::new());
     let auth_session_repository =
         AuthSessionRepoAny::Postgres(PostgresAuthSessionRepository::new(postgres.get_db()));
-    let refresh_token_repository =
-        RefreshTokenRepoAny::Postgres(PostgresRefreshTokenRepository::new(postgres.get_db()));
+    let recovery_code_repository =
+        RecoveryCodeRepoAny::RandomBytes10(RandBytesRecoveryCodeRepository::new(HasherRepoAny::Argon2(Argon2HasherRepository {  })));
     let redirect_uri_repository =
         RedirectUriRepoAny::Postgres(PostgresRedirectUriRepository::new(postgres.get_db()));
+    let refresh_token_repository =
+        RefreshTokenRepoAny::Postgres(PostgresRefreshTokenRepository::new(postgres.get_db()));
     let role_repository = RoleRepoAny::Postgres(PostgresRoleRepository::new(postgres.get_db()));
     let keystore_repository =
         KeyStoreRepoAny::Postgres(PostgresKeyStoreRepository::new(postgres.get_db()));
@@ -101,8 +106,9 @@ pub async fn build_repos_from_env(cfg: AppConfig) -> Result<RepoBundle, anyhow::
         credential_repository,
         hasher_repository,
         auth_session_repository,
-        refresh_token_repository,
+        recovery_code_repository,
         redirect_uri_repository,
+        refresh_token_repository,
         role_repository,
         keystore_repository,
         user_role_repository,
