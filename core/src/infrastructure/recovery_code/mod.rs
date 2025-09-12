@@ -1,5 +1,6 @@
 use crate::domain::common::entities::app_errors::CoreError;
 use crate::domain::credential::entities::Credential;
+use crate::domain::crypto::entities::HashResult;
 use crate::domain::trident::entities::MfaRecoveryCode;
 use crate::domain::trident::ports::RecoveryCodeRepository;
 use crate::infrastructure::repositories::random_bytes_recovery_code::{
@@ -30,9 +31,9 @@ impl RecoveryCodeRepository for RecoveryCodeRepoAny {
     }
 
     async fn secure_for_storage(
-        &self, 
+        &self,
         code: &MfaRecoveryCode
-    ) -> Result<String, CoreError> {
+    ) -> Result<HashResult, CoreError> {
         match self {
             RecoveryCodeRepoAny::RandomBytes10(repo) => {
                 repo.secure_for_storage(&code).await

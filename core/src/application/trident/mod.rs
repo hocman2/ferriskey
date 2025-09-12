@@ -1,5 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use futures::future::try_join_all;
 use hmac::{Hmac, Mac};
 use rand::RngCore;
 use sha1::Sha1;
@@ -8,20 +9,13 @@ use uuid::Uuid;
 use crate::{
     application::common::FerriskeyService,
     domain::{
-        authentication::{ports::AuthSessionRepository, value_objects::Identity},
-        common::{entities::app_errors::CoreError, generate_random_string},
-        credential::ports::CredentialRepository,
-        crypto::ports::HasherRepository,
-        trident::{
-            entities::{TotpSecret, MfaRecoveryCode},
+        jwt::ports::JwtService,
+        authentication::{ports::AuthSessionRepository, value_objects::Identity}, common::{entities::app_errors::CoreError, generate_random_string}, credential::ports::CredentialRepository, crypto::ports::HasherRepository, jwt::entities::JwtError, trident::{
+            entities::TotpSecret,
             ports::{
-                ChallengeOtpInput, ChallengeOtpOutput, SetupOtpInput, SetupOtpOutput,
-                TridentService, UpdatePasswordInput, VerifyOtpInput, VerifyOtpOutput,
-                GenerateRecoveryCodeInput, GenerateRecoveryCodeOutput,
-                BurnRecoveryCodeInput, BurnRecoveryCodeOutput,
+                BurnRecoveryCodeInput, BurnRecoveryCodeOutput, ChallengeOtpInput, ChallengeOtpOutput, GenerateRecoveryCodeInput, GenerateRecoveryCodeOutput, RecoveryCodeRepository, SetupOtpInput, SetupOtpOutput, TridentService, UpdatePasswordInput, VerifyOtpInput, VerifyOtpOutput
             },
-        },
-        user::{entities::RequiredAction, ports::UserRequiredActionRepository},
+        }, user::{entities::RequiredAction, ports::UserRequiredActionRepository}
     },
 };
 
@@ -109,41 +103,64 @@ impl TridentService for FerriskeyService {
             _ => return Err(CoreError::Forbidden("is not user".to_string())),
         };
 
-        if false /* && input.authorization */ {
-           return Err(CoreError::Forbidden("Authorization code is invalid".to_string())); 
+        let claims = self.authenticate_factory.jwt_service.verify_token(
+            input.authorization,
+            user.realm_id
+        )
+        .await
+        .map_err(|e|
+            match e {
+                // This may not be exhaustive
+                JwtError::ExpiredToken |
+                JwtError::InvalidToken => CoreError::InvalidToken,
+
+                _ => CoreError::Forbidden("Authorization code is invalid".to_string()),
+            }
+        )?;
+
+        // Validate aud manually
+        if claims.aud.iter().find(|aud| aud.as_str() == "recovery-code-generator").is_none() {
+            return Err(
+                CoreError::Forbidden("Authorization code is invalid".to_string())
+            );
         }
 
-        let mut codes = Vec::<MfaRecoveryCode>::with_capacity(input.amount);
+        let codes = self.
+            recovery_code_repo.
+            generate_n_recovery_code(input.amount);
 
-        for _ in 1..=input.amount {
-            codes.push(self.recovery_code_repo.generate_code());
-        }
+        // Hash and store codes as credentials
+        let secure_codes ={
+            let futures = codes
+                .iter()
+                .map(|code|
+                    self
+                        .recovery_code_repo
+                        .secure_for_storage(&code)
+                );
 
-        codes
-            .into_iter()
-            .map(|code| 
-                self.recovery_code_repo.format_for_storage(&code)
-            )
-            .try_for_each(|code| {
-                let code = code?;
-                // <D-v> 
-                // Method is certainly not optimized for batch insert
+            try_join_all(futures).await
+        }?;
+
+        let _credentials = {
+            let futures = secure_codes.into_iter().map(|c|
                 self.credential_repository
-                    .create_credential(
-                        user.id,
-                        "recovery-code".to_string(),
-                        code,
-                        "".into(),
-                        false
-                    );
+                    .create_credential(user.id,
+                       "recovery-code".to_string(),
+                       c, "".into(),
+                       false
+                    )
+            );
+            try_join_all(futures).await
+        }.map_err(|e| {
+            // I'm unsure what to do with a HashError,
+            // it's probably a server misconfiguration so logging it can be useful
+            tracing::error!("{e}");
+            CoreError::InternalServerError
+        })?;
 
-                Ok(())
-            })
-            .map_err(|e| {
-                tracing::error!("{e}");
-                CoreError::InternalServerError
-            })?;
-        
+        // Now format the codes into human-readable format for
+        // distribution to the user
         let codes = codes
             .into_iter()
             .map(|c| self.recovery_code_repo.to_string(&c))
@@ -161,13 +178,13 @@ impl TridentService for FerriskeyService {
     ) -> Result<BurnRecoveryCodeOutput, CoreError> {
         // Get user creds
         // filter by type "recovery-code"
-        
+
         // Look for a match
         // If good, give authorzation token and invalidate code
         Ok(BurnRecoveryCodeOutput {
         })
     }
-    
+
     async fn challenge_otp(
         &self,
         identity: Identity,

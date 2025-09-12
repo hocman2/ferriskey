@@ -1,10 +1,7 @@
 use uuid::Uuid;
 
 use crate::domain::{
-    authentication::value_objects::Identity,
-    common::entities::app_errors::CoreError,
-    credential::entities::Credential,
-    trident::entities::{MfaRecoveryCode, TotpError, TotpSecret},
+    authentication::value_objects::Identity, common::entities::app_errors::CoreError, credential::entities::Credential, crypto::entities::HashResult, trident::entities::{MfaRecoveryCode, TotpError, TotpSecret}
 };
 
 pub trait TotpService: Send + Sync + Clone + 'static {
@@ -78,7 +75,7 @@ pub trait RecoveryCodeRepository: Send + Sync + Clone + 'static {
     fn secure_for_storage(
         &self,
         code: &MfaRecoveryCode
-    ) -> impl Future<Output = Result<String, CoreError>> + Send;
+    ) -> impl Future<Output = Result<HashResult, CoreError>> + Send;
 
     /// Compares the given human-readable formatted code against a stored credential
     fn verify(
