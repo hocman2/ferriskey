@@ -9,10 +9,7 @@ use crate::{
             value_objects::CreateClientRequest,
         },
         common::{
-            AppConfig, FerriskeyConfig,
-            entities::{InitializationResult, StartupConfig, app_errors::CoreError},
-            generate_random_string,
-            ports::CoreService,
+            entities::{app_errors::CoreError, InitializationResult, StartupConfig}, generate_random_string, ports::CoreService, AppConfig, FerriskeyConfig
         },
         credential::ports::CredentialRepository,
         crypto::ports::HasherRepository,
@@ -28,26 +25,14 @@ use crate::{
         },
     },
     infrastructure::{
-        auth_session::AuthSessionRepoAny,
-        client::repositories::{ClientRepoAny, RedirectUriRepoAny},
-        credential::CredentialRepoAny,
-        hasher::HasherRepoAny,
-        health::HealthCheckRepoAny,
-        jwt::KeyStoreRepoAny,
-        realm::repositories::RealmRepoAny,
-        refresh_token::RefreshTokenRepoAny,
-        repositories::build_repos_from_env,
-        role::repositories::RoleRepoAny,
-        user::{
-            UserRepoAny,
+        auth_session::AuthSessionRepoAny, client::repositories::{ClientRepoAny, RedirectUriRepoAny}, credential::CredentialRepoAny, hasher::HasherRepoAny, health::HealthCheckRepoAny, jwt::KeyStoreRepoAny, realm::repositories::RealmRepoAny, recovery_code::RecoveryCodeRepoAny, refresh_token::RefreshTokenRepoAny, repositories::build_repos_from_env, role::repositories::RoleRepoAny, user::{
             repositories::{
                 user_required_action_repository::UserRequiredActionRepoAny,
                 user_role_repository::UserRoleRepoAny,
-            },
-        },
-        webhook::repositories::{
+            }, UserRepoAny
+        }, webhook::repositories::{
             webhook_notifier_repository::WebhookNotifierRepoAny, webhook_repository::WebhookRepoAny,
-        },
+        }
     },
 };
 
@@ -77,6 +62,7 @@ pub struct FerriskeyService {
     pub webhook_notifier_repository: WebhookNotifierRepoAny,
     pub grant_type_strategies: GrantTypeStrategies,
     pub authenticate_factory: AuthenticateFactory,
+    pub recovery_code_repo: RecoveryCodeRepoAny,
 }
 
 impl FerriskeyService {
@@ -139,6 +125,7 @@ impl FerriskeyService {
             health_check_repository: repos.health_check_repository,
             webhook_repository: repos.webhook_repository,
             webhook_notifier_repository: repos.webhook_notifier_repository,
+            recovery_code_repo: repos.recovery_code_repository,
             config,
 
             policy,

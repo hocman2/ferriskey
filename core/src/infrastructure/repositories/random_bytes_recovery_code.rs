@@ -1,5 +1,6 @@
 use crate::domain::common::entities::app_errors::CoreError;
 use crate::domain::credential::entities::Credential;
+use crate::domain::crypto::entities::HashResult;
 use crate::domain::crypto::ports::HasherRepository;
 use crate::domain::trident::entities::MfaRecoveryCode;
 use crate::domain::trident::ports::{RecoveryCodeFormatter, RecoveryCodeRepository};
@@ -17,7 +18,7 @@ pub struct RandBytesRecoveryCodeRepository<const L: usize, F: RecoveryCodeFormat
 }
 
 impl<const L: usize, F: RecoveryCodeFormatter> RandBytesRecoveryCodeRepository<L, F> {
-    fn new(hasher: HasherRepoAny) -> Self {
+    pub fn new(hasher: HasherRepoAny) -> Self {
         RandBytesRecoveryCodeRepository {
             _phantom: PhantomData::<F>,
             hasher,
