@@ -76,23 +76,29 @@ where
         &self,
         in_code: String,
         against: Credential,
-    ) -> Result<bool, CoreError> {
+    ) -> Result<Option<Credential>, CoreError> {
         let in_code = F::decode(in_code)?;
         let in_code = String::from_utf8(in_code.0).map_err(|_| CoreError::Invalid)?;
 
-        let salt = against.salt.ok_or(CoreError::InternalServerError)?;
+        let salt = against.salt.as_ref().ok_or(CoreError::InternalServerError)?;
 
-        self.hasher.verify_password(
+        let verif = self.hasher.verify_password(
             in_code.as_str(),
             &against.secret_data,
             &against.credential_data,
-            &salt
+            salt
         )
         .await
         .map_err(|_e| {
-                tracing::debug!("An error occured while verifying password. The error message is intentionally left empty as it may contain sensitive data");
-                CoreError::VerifyPasswordError(String::from(""))
-            })
+            tracing::debug!("An error occured while verifying password. The error message is intentionally left empty as it may contain sensitive data");
+            CoreError::VerifyPasswordError(String::from(""))
+        })?;
+
+        if verif {
+            Ok(Some(against))
+        } else {
+            Ok(None)
+        }
     }
 }
 
