@@ -45,7 +45,7 @@ impl RecoveryCodeRepository for RecoveryCodeRepoAny {
         &self,
         in_code: String,
         against: Credential,
-    ) -> Result<bool, CoreError> {
+    ) -> Result<Option<Credential>, CoreError> {
         match self {
             RecoveryCodeRepoAny::RandomBytes10(repo) => {
                 repo.verify(in_code, against).await

@@ -82,7 +82,7 @@ pub trait RecoveryCodeRepository: Send + Sync + Clone + 'static {
         &self,
         in_code: String,
         against: Credential,
-    ) -> impl Future<Output = Result<bool, CoreError>> + Send;
+    ) -> impl Future<Output = Result<Option<Credential>, CoreError>> + Send;
 
     /// Formats the code in human-readable format
     fn to_string(&self, code: &MfaRecoveryCode) -> String;
