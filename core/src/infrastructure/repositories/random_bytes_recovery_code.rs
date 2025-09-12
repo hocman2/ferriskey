@@ -59,8 +59,17 @@ where
     async fn secure_for_storage(
         &self,
         code: &MfaRecoveryCode,
-    ) -> Result<String, CoreError> {
-        Ok("".to_string())
+    ) -> Result<HashResult, CoreError> {
+        let str = str::from_utf8(&code.0)
+            .map_err(|_|{
+                tracing::error!("An MfaRecoveryCode couldn't be converted to utf8");
+                CoreError::InternalServerError
+            })?;
+
+        self.hasher
+            .hash_password(str)
+            .await
+            .map_err(|_| CoreError::InternalServerError)
     }
 
     async fn verify(

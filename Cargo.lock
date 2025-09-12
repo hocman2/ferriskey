@@ -1160,6 +1160,7 @@ dependencies = [
  "base32",
  "base64",
  "chrono",
+ "futures",
  "hmac",
  "jsonwebtoken",
  "rand 0.8.5",
