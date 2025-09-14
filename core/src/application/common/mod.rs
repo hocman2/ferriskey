@@ -9,7 +9,10 @@ use crate::{
             value_objects::CreateClientRequest,
         },
         common::{
-            entities::{app_errors::CoreError, InitializationResult, StartupConfig}, generate_random_string, ports::CoreService, AppConfig, FerriskeyConfig
+            AppConfig, FerriskeyConfig,
+            entities::{InitializationResult, StartupConfig, app_errors::CoreError},
+            generate_random_string,
+            ports::CoreService,
         },
         credential::ports::CredentialRepository,
         crypto::ports::HasherRepository,
@@ -25,14 +28,27 @@ use crate::{
         },
     },
     infrastructure::{
-        auth_session::AuthSessionRepoAny, client::repositories::{ClientRepoAny, RedirectUriRepoAny}, credential::CredentialRepoAny, hasher::HasherRepoAny, health::HealthCheckRepoAny, jwt::KeyStoreRepoAny, realm::repositories::RealmRepoAny, recovery_code::RecoveryCodeRepoAny, refresh_token::RefreshTokenRepoAny, repositories::build_repos_from_env, role::repositories::RoleRepoAny, user::{
+        auth_session::AuthSessionRepoAny,
+        client::repositories::{ClientRepoAny, RedirectUriRepoAny},
+        credential::CredentialRepoAny,
+        hasher::HasherRepoAny,
+        health::HealthCheckRepoAny,
+        jwt::KeyStoreRepoAny,
+        realm::repositories::RealmRepoAny,
+        recovery_code::RecoveryCodeRepoAny,
+        refresh_token::RefreshTokenRepoAny,
+        repositories::build_repos_from_env,
+        role::repositories::RoleRepoAny,
+        user::{
+            UserRepoAny,
             repositories::{
                 user_required_action_repository::UserRequiredActionRepoAny,
                 user_role_repository::UserRoleRepoAny,
-            }, UserRepoAny
-        }, webhook::repositories::{
+            },
+        },
+        webhook::repositories::{
             webhook_notifier_repository::WebhookNotifierRepoAny, webhook_repository::WebhookRepoAny,
-        }
+        },
     },
 };
 

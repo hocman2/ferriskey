@@ -77,8 +77,9 @@ pub async fn build_repos_from_env(cfg: AppConfig) -> Result<RepoBundle, anyhow::
     let hasher_repository = HasherRepoAny::Argon2(Argon2HasherRepository::new());
     let auth_session_repository =
         AuthSessionRepoAny::Postgres(PostgresAuthSessionRepository::new(postgres.get_db()));
-    let recovery_code_repository =
-        RecoveryCodeRepoAny::RandomBytes10(RandBytesRecoveryCodeRepository::new(HasherRepoAny::Argon2(Argon2HasherRepository {  })));
+    let recovery_code_repository = RecoveryCodeRepoAny::RandomBytes10(
+        RandBytesRecoveryCodeRepository::new(HasherRepoAny::Argon2(Argon2HasherRepository {})),
+    );
     let redirect_uri_repository =
         RedirectUriRepoAny::Postgres(PostgresRedirectUriRepository::new(postgres.get_db()));
     let refresh_token_repository =

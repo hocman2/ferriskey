@@ -30,14 +30,9 @@ impl RecoveryCodeRepository for RecoveryCodeRepoAny {
         }
     }
 
-    async fn secure_for_storage(
-        &self,
-        code: &MfaRecoveryCode
-    ) -> Result<HashResult, CoreError> {
+    async fn secure_for_storage(&self, code: &MfaRecoveryCode) -> Result<HashResult, CoreError> {
         match self {
-            RecoveryCodeRepoAny::RandomBytes10(repo) => {
-                repo.secure_for_storage(&code).await
-            }
+            RecoveryCodeRepoAny::RandomBytes10(repo) => repo.secure_for_storage(&code).await,
         }
     }
 
@@ -47,9 +42,7 @@ impl RecoveryCodeRepository for RecoveryCodeRepoAny {
         against: Credential,
     ) -> Result<Option<Credential>, CoreError> {
         match self {
-            RecoveryCodeRepoAny::RandomBytes10(repo) => {
-                repo.verify(in_code, against).await
-            }
+            RecoveryCodeRepoAny::RandomBytes10(repo) => repo.verify(in_code, against).await,
         }
     }
 }

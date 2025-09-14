@@ -56,15 +56,11 @@ where
         F::decode(code)
     }
 
-    async fn secure_for_storage(
-        &self,
-        code: &MfaRecoveryCode,
-    ) -> Result<HashResult, CoreError> {
-        let str = str::from_utf8(&code.0)
-            .map_err(|_|{
-                tracing::error!("An MfaRecoveryCode couldn't be converted to utf8");
-                CoreError::InternalServerError
-            })?;
+    async fn secure_for_storage(&self, code: &MfaRecoveryCode) -> Result<HashResult, CoreError> {
+        let str = str::from_utf8(&code.0).map_err(|_| {
+            tracing::error!("An MfaRecoveryCode couldn't be converted to utf8");
+            CoreError::InternalServerError
+        })?;
 
         self.hasher
             .hash_password(str)
@@ -80,7 +76,10 @@ where
         let in_code = F::decode(in_code)?;
         let in_code = String::from_utf8(in_code.0).map_err(|_| CoreError::Invalid)?;
 
-        let salt = against.salt.as_ref().ok_or(CoreError::InternalServerError)?;
+        let salt = against
+            .salt
+            .as_ref()
+            .ok_or(CoreError::InternalServerError)?;
 
         let verif = self.hasher.verify_password(
             in_code.as_str(),
@@ -94,11 +93,7 @@ where
             CoreError::VerifyPasswordError(String::from(""))
         })?;
 
-        if verif {
-            Ok(Some(against))
-        } else {
-            Ok(None)
-        }
+        if verif { Ok(Some(against)) } else { Ok(None) }
     }
 }
 
@@ -138,8 +133,8 @@ impl RecoveryCodeFormatter for B32Split4RecoveryCodeFormatter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::infrastructure::repositories::argon2_hasher::Argon2HasherRepository;
     use crate::infrastructure::hasher::HasherRepoAny;
+    use crate::infrastructure::repositories::argon2_hasher::Argon2HasherRepository;
 
     type DefaultFormatter = B32Split4RecoveryCodeFormatter;
     const HASHER_REPO: HasherRepoAny = HasherRepoAny::Argon2(Argon2HasherRepository {});
@@ -159,7 +154,10 @@ mod tests {
         let mut prev_code = repo.generate_recovery_code();
         for _ in 1..=10 {
             let code = repo.generate_recovery_code();
-            assert_ne!(prev_code, code, "Two successive generated codes are identical. While this doesn't mean the test is invalid, it should only fail extremly rarely. Try re-running tests.");
+            assert_ne!(
+                prev_code, code,
+                "Two successive generated codes are identical. While this doesn't mean the test is invalid, it should only fail extremly rarely. Try re-running tests."
+            );
             prev_code = code;
         }
     }
@@ -167,7 +165,8 @@ mod tests {
     #[test]
     fn test_random_bytes_recovery_code_string_convertion() {
         // This test is incomplete as it only validates the format of the output, not its content
-        let repo_a = RandBytesRecoveryCodeRepository::<10, B32Split4RecoveryCodeFormatter>::new(HASHER_REPO);
+        let repo_a =
+            RandBytesRecoveryCodeRepository::<10, B32Split4RecoveryCodeFormatter>::new(HASHER_REPO);
         let mut code = MfaRecoveryCode([0u8; 10].to_vec());
         assert_eq!(
             "yyyy-yyyy-yyyy-yyyy",
@@ -176,7 +175,8 @@ mod tests {
         );
 
         // Test on non-perfect byte length
-        let repo_b = RandBytesRecoveryCodeRepository::<11, B32Split4RecoveryCodeFormatter>::new(HASHER_REPO);
+        let repo_b =
+            RandBytesRecoveryCodeRepository::<11, B32Split4RecoveryCodeFormatter>::new(HASHER_REPO);
         code = MfaRecoveryCode([0u8; 11].to_vec());
         assert_eq!(
             "yyyy-yyyy-yyyy-yyyy-yy",
@@ -187,30 +187,50 @@ mod tests {
 
     #[test]
     fn test_random_bytes_recovery_code_encode_decode_test() {
-        let repo = RandBytesRecoveryCodeRepository::<10, B32Split4RecoveryCodeFormatter>::new(HASHER_REPO);
+        let repo =
+            RandBytesRecoveryCodeRepository::<10, B32Split4RecoveryCodeFormatter>::new(HASHER_REPO);
         let code = repo.generate_recovery_code();
         let encoded = repo.to_string(&code);
         let decoded = repo.from_string(encoded.clone());
         assert!(decoded.is_ok(), "There was an error decoding the code");
-        assert_eq!(decoded.unwrap(), code, "The decoded code doesn't match the original one");
+        assert_eq!(
+            decoded.unwrap(),
+            code,
+            "The decoded code doesn't match the original one"
+        );
         // Test repeated with different lengths
-        let repo = RandBytesRecoveryCodeRepository::<7, B32Split4RecoveryCodeFormatter>::new(HASHER_REPO);
+        let repo =
+            RandBytesRecoveryCodeRepository::<7, B32Split4RecoveryCodeFormatter>::new(HASHER_REPO);
         let code = repo.generate_recovery_code();
         let encoded = repo.to_string(&code);
         let decoded = repo.from_string(encoded.clone());
         assert!(decoded.is_ok(), "There was an error decoding the code");
-        assert_eq!(decoded.unwrap(), code, "The decoded code doesn't match the original one");
-        let repo = RandBytesRecoveryCodeRepository::<11, B32Split4RecoveryCodeFormatter>::new(HASHER_REPO);
+        assert_eq!(
+            decoded.unwrap(),
+            code,
+            "The decoded code doesn't match the original one"
+        );
+        let repo =
+            RandBytesRecoveryCodeRepository::<11, B32Split4RecoveryCodeFormatter>::new(HASHER_REPO);
         let code = repo.generate_recovery_code();
         let encoded = repo.to_string(&code);
         let decoded = repo.from_string(encoded.clone());
         assert!(decoded.is_ok(), "There was an error decoding the code");
-        assert_eq!(decoded.unwrap(), code, "The decoded code doesn't match the original one");
-        let repo = RandBytesRecoveryCodeRepository::<50, B32Split4RecoveryCodeFormatter>::new(HASHER_REPO);
+        assert_eq!(
+            decoded.unwrap(),
+            code,
+            "The decoded code doesn't match the original one"
+        );
+        let repo =
+            RandBytesRecoveryCodeRepository::<50, B32Split4RecoveryCodeFormatter>::new(HASHER_REPO);
         let code = repo.generate_recovery_code();
         let encoded = repo.to_string(&code);
         let decoded = repo.from_string(encoded.clone());
         assert!(decoded.is_ok(), "There was an error decoding the code");
-        assert_eq!(decoded.unwrap(), code, "The decoded code doesn't match the original one");
+        assert_eq!(
+            decoded.unwrap(),
+            code,
+            "The decoded code doesn't match the original one"
+        );
     }
 }

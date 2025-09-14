@@ -9,13 +9,20 @@ use uuid::Uuid;
 use crate::{
     application::common::FerriskeyService,
     domain::{
-        jwt::ports::JwtService,
-        authentication::{ports::AuthSessionRepository, value_objects::Identity}, common::{entities::app_errors::CoreError, generate_random_string}, credential::ports::CredentialRepository, crypto::ports::HasherRepository, jwt::entities::JwtError, trident::{
+        authentication::{ports::AuthSessionRepository, value_objects::Identity},
+        common::{entities::app_errors::CoreError, generate_random_string},
+        credential::{entities::Credential, ports::CredentialRepository},
+        crypto::ports::HasherRepository,
+        trident::{
             entities::TotpSecret,
             ports::{
-                BurnRecoveryCodeInput, BurnRecoveryCodeOutput, ChallengeOtpInput, ChallengeOtpOutput, GenerateRecoveryCodeInput, GenerateRecoveryCodeOutput, RecoveryCodeRepository, SetupOtpInput, SetupOtpOutput, TridentService, UpdatePasswordInput, VerifyOtpInput, VerifyOtpOutput
+                BurnRecoveryCodeInput, BurnRecoveryCodeOutput, ChallengeOtpInput,
+                ChallengeOtpOutput, GenerateRecoveryCodeInput, GenerateRecoveryCodeOutput,
+                RecoveryCodeRepository, SetupOtpInput, SetupOtpOutput, TridentService,
+                UpdatePasswordInput, VerifyOtpInput, VerifyOtpOutput,
             },
-        }, user::{entities::RequiredAction, ports::UserRequiredActionRepository}
+        },
+        user::{entities::RequiredAction, ports::UserRequiredActionRepository},
     },
 };
 
@@ -96,63 +103,39 @@ impl TridentService for FerriskeyService {
     async fn generate_recovery_code(
         &self,
         identity: Identity,
-        input: GenerateRecoveryCodeInput
+        input: GenerateRecoveryCodeInput,
     ) -> Result<GenerateRecoveryCodeOutput, CoreError> {
         let user = match identity {
             Identity::User(user) => user,
             _ => return Err(CoreError::Forbidden("is not user".to_string())),
         };
 
-        let claims = self.authenticate_factory.jwt_service.verify_token(
-            input.authorization,
-            user.realm_id
-        )
-        .await
-        .map_err(|e|
-            match e {
-                // This may not be exhaustive
-                JwtError::ExpiredToken |
-                JwtError::InvalidToken => CoreError::InvalidToken,
-
-                _ => CoreError::Forbidden("Authorization code is invalid".to_string()),
-            }
-        )?;
-
-        // Validate aud manually
-        if claims.aud.iter().find(|aud| aud.as_str() == "recovery-code-generator").is_none() {
-            return Err(
-                CoreError::Forbidden("Authorization code is invalid".to_string())
-            );
-        }
-
-        let codes = self.
-            recovery_code_repo.
-            generate_n_recovery_code(input.amount);
+        let codes = self
+            .recovery_code_repo
+            .generate_n_recovery_code(input.amount);
 
         // Hash and store codes as credentials
-        let secure_codes ={
+        let secure_codes = {
             let futures = codes
                 .iter()
-                .map(|code|
-                    self
-                        .recovery_code_repo
-                        .secure_for_storage(&code)
-                );
+                .map(|code| self.recovery_code_repo.secure_for_storage(&code));
 
             try_join_all(futures).await
         }?;
 
         let _credentials = {
-            let futures = secure_codes.into_iter().map(|c|
-                self.credential_repository
-                    .create_credential(user.id,
-                       "recovery-code".to_string(),
-                       c, "".into(),
-                       false
-                    )
-            );
+            let futures = secure_codes.into_iter().map(|c| {
+                self.credential_repository.create_credential(
+                    user.id,
+                    "recovery-code".to_string(),
+                    c,
+                    "".into(),
+                    false,
+                )
+            });
             try_join_all(futures).await
-        }.map_err(|e| {
+        }
+        .map_err(|e| {
             // I'm unsure what to do with a HashError,
             // it's probably a server misconfiguration so logging it can be useful
             tracing::error!("{e}");
@@ -166,23 +149,65 @@ impl TridentService for FerriskeyService {
             .map(|c| self.recovery_code_repo.to_string(&c))
             .collect::<Vec<String>>();
 
-        Ok(GenerateRecoveryCodeOutput {
-            codes,
-        })
+        Ok(GenerateRecoveryCodeOutput { codes })
     }
 
     async fn burn_recovery_code(
         &self,
         identity: Identity,
-        input: BurnRecoveryCodeInput
+        input: BurnRecoveryCodeInput,
     ) -> Result<BurnRecoveryCodeOutput, CoreError> {
-        // Get user creds
-        // filter by type "recovery-code"
+        let user = match identity {
+            Identity::User(user) => user,
+            _ => return Err(CoreError::Forbidden("Is not an user".to_string())),
+        };
 
-        // Look for a match
+        let user_credentials = self
+            .credential_repository
+            .get_credentials_by_user_id(user.id)
+            .await
+            .map_err(|_| CoreError::GetUserCredentialsError)?;
+
+        let recovery_code_creds = user_credentials
+            .into_iter()
+            .filter(|cred| cred.credential_type == "recovery-code")
+            .collect::<Vec<Credential>>();
+
+        let verify_results = {
+            let futures = recovery_code_creds.into_iter().map(|code_cred| {
+                self.recovery_code_repo
+                    .verify(input.code.clone(), code_cred)
+            });
+
+            try_join_all(futures).await
+        }?;
+
+        // This doesn't check if there are multiple matches because it is not necessarly a bug
+        // It is highly unlikely but a user may have multiple identical recovery codes
+        // or it could also be a duplicate storage bug.
+        // Anyway, this is not the place to check such a bug
+        let burnt_code = verify_results
+            .into_iter()
+            .find(|c| c.is_some())
+            .ok_or_else(|| {
+                CoreError::RecoveryCodeBurnError(
+                    "The provided code is invalid or has already been used".to_string(),
+                )
+            })?
+            // Safe, we checked above
+            .unwrap();
+
+        self
+            .credential_repository
+            .delete_by_id(burnt_code.id)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to delete a credential even though it was just fetched with the same repository: {e}");
+                CoreError::InternalServerError
+            })?;
+
         // If good, give authorzation token and invalidate code
-        Ok(BurnRecoveryCodeOutput {
-        })
+        Ok(BurnRecoveryCodeOutput {})
     }
 
     async fn challenge_otp(
