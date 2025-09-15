@@ -38,7 +38,7 @@ pub struct AuthenticateFactory {
     client_repository: ClientRepoAny,
     credential_repository: CredentialRepoAny,
     hasher_repository: HasherRepoAny,
-    pub(crate) jwt_service: DefaultJwtService,
+    jwt_service: DefaultJwtService,
 }
 
 impl AuthenticateFactory {
