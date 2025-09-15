@@ -31,13 +31,15 @@ impl<const L: usize> RecoveryCodeRepository for RandBytesRecoveryCodeRepository<
     }
 
     async fn secure_for_storage(&self, code: &MfaRecoveryCode) -> Result<HashResult, CoreError> {
-        let str = str::from_utf8(&code.0).map_err(|_| {
-            tracing::error!("An MfaRecoveryCode couldn't be converted to utf8");
-            CoreError::InternalServerError
-        })?;
+        let hex = code.0.iter().fold(
+            String::with_capacity(code.0.len() * 2),
+            |accu, byte| {
+                format!("{accu}{byte:x?}")
+            }
+        );
 
         self.hasher
-            .hash_password(str)
+            .hash_password(hex.as_str())
             .await
             .map_err(|_| CoreError::InternalServerError)
     }
@@ -47,7 +49,12 @@ impl<const L: usize> RecoveryCodeRepository for RandBytesRecoveryCodeRepository<
         in_code: &MfaRecoveryCode,
         against: Credential,
     ) -> Result<Option<Credential>, CoreError> {
-        let in_code = String::from_utf8(in_code.0.clone()).map_err(|_| CoreError::Invalid)?;
+        let in_code = in_code.0.iter().fold(
+            String::with_capacity(in_code.0.len() * 2),
+            |accu, byte| {
+                format!("{accu}{byte:x?}")
+            }
+        );
 
         let salt = against
             .salt
