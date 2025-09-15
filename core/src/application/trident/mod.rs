@@ -110,20 +110,26 @@ impl TridentService for FerriskeyService {
             _ => return Err(CoreError::Forbidden("is not user".to_string())),
         };
 
+        let stored_codes = self
+            .credential_repository
+            .get_credentials_by_user_id(user.id)
+            .await
+            .map_err(|_| CoreError::InternalServerError)?
+            .into_iter()
+            .filter(|cred| cred.credential_type.as_str() == "recovery-code")
+            .collect::<Vec<Credential>>();
+
         let codes = self
             .recovery_code_repo
             .generate_n_recovery_code(input.amount);
 
         // Hash and store codes as credentials
-        let secure_codes = {
+        let _credentials = {
             let futures = codes
                 .iter()
                 .map(|code| self.recovery_code_repo.secure_for_storage(&code));
+            let secure_codes = try_join_all(futures).await?;
 
-            try_join_all(futures).await
-        }?;
-
-        let _credentials = {
             let futures = secure_codes.into_iter().map(|c| {
                 self.credential_repository.create_credential(
                     user.id,
@@ -136,9 +142,16 @@ impl TridentService for FerriskeyService {
             try_join_all(futures).await
         }
         .map_err(|e| {
-            // I'm unsure what to do with a HashError,
-            // it's probably a server misconfiguration so logging it can be useful
             tracing::error!("{e}");
+            CoreError::InternalServerError
+        })?;
+
+        // Once new codes stored it's now safe to invalidate the previous recovery codes
+        let _ = {
+            let futures = stored_codes.into_iter().map(|c| self.credential_repository.delete_by_id(c.id));
+            try_join_all(futures).await
+        }.map_err(|e| {
+            tracing::error!("Failed to delete previously fetched credentials: {e}");
             CoreError::InternalServerError
         })?;
 
@@ -161,6 +174,15 @@ impl TridentService for FerriskeyService {
             Identity::User(user) => user,
             _ => return Err(CoreError::Forbidden("Is not an user".to_string())),
         };
+
+        let session_code =
+            Uuid::parse_str(&input.session_code).map_err(|_| CoreError::SessionCreateError)?;
+
+        let auth_session = self
+            .auth_session_repository
+            .get_by_session_code(session_code)
+            .await
+            .map_err(|_| CoreError::SessionNotFound)?;
 
         let user_credentials = self
             .credential_repository
@@ -206,8 +228,23 @@ impl TridentService for FerriskeyService {
                 CoreError::InternalServerError
             })?;
 
-        // If good, give authorzation token and invalidate code
-        Ok(BurnRecoveryCodeOutput {})
+        let authorization_code = generate_random_string();
+
+        self.auth_session_repository
+            .update_code_and_user_id(session_code, authorization_code.clone(), user.id)
+            .await
+            .map_err(|e| CoreError::TotpVerificationFailed(e.to_string()))?;
+
+        let current_state = auth_session.state.ok_or(CoreError::RecoveryCodeBurnError(
+            "Invalid session state".to_string(),
+        ))?;
+
+        let login_url = format!(
+            "{}?code={}&state={}",
+            auth_session.redirect_uri, authorization_code, current_state
+        );
+
+        Ok(BurnRecoveryCodeOutput { login_url })
     }
 
     async fn challenge_otp(

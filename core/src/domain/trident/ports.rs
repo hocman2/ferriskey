@@ -58,10 +58,13 @@ pub struct GenerateRecoveryCodeOutput {
 }
 
 pub struct BurnRecoveryCodeInput {
+    pub session_code: String,
     pub code: String,
 }
 
-pub struct BurnRecoveryCodeOutput {}
+pub struct BurnRecoveryCodeOutput {
+    pub login_url: String,
+}
 
 pub trait RecoveryCodeRepository: Send + Sync + Clone + 'static {
     fn generate_recovery_code(&self) -> MfaRecoveryCode;
