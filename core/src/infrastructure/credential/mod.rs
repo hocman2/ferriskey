@@ -77,14 +77,14 @@ impl CredentialRepository for CredentialRepoAny {
     }
 
     async fn create_recovery_code_credentials(
-            &self,
-            user_id: Uuid,
-            hashes: Vec<HashResult>,
-        ) -> Result<Vec<Credential>, CredentialError> {
-
-            match self {
-                CredentialRepoAny::Postgres(repo) =>
-                    repo.create_recovery_code_credentials(user_id, hashes).await
+        &self,
+        user_id: Uuid,
+        hashes: Vec<HashResult>,
+    ) -> Result<Vec<Credential>, CredentialError> {
+        match self {
+            CredentialRepoAny::Postgres(repo) => {
+                repo.create_recovery_code_credentials(user_id, hashes).await
             }
+        }
     }
 }

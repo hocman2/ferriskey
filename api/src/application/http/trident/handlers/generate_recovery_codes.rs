@@ -1,13 +1,19 @@
-
 use axum::{Extension, extract::State};
-use serde::{Deserialize, Serialize};
 use ferriskey_core::domain::{
-    authentication::value_objects::Identity, trident::ports::{GenerateRecoveryCodeInput, TridentService}
+    authentication::value_objects::Identity,
+    trident::ports::{GenerateRecoveryCodeInput, TridentService},
 };
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
 
-use crate::application::http::server::{api_entities::{api_error::{ApiError, ValidateJson}, response::Response}, app_state::AppState};
+use crate::application::http::server::{
+    api_entities::{
+        api_error::{ApiError, ValidateJson},
+        response::Response,
+    },
+    app_state::AppState,
+};
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, Validate)]
 pub struct GenerateRecoveryCodesRequest {
@@ -17,7 +23,7 @@ pub struct GenerateRecoveryCodesRequest {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct GenerateRecoveryCodesResponse {
-    codes: Vec<String>
+    codes: Vec<String>,
 }
 
 #[utoipa::path(
@@ -35,7 +41,7 @@ pub struct GenerateRecoveryCodesResponse {
 pub async fn generate_recovery_codes(
     State(state): State<AppState>,
     Extension(identity): Extension<Identity>,
-    ValidateJson(payload): ValidateJson<GenerateRecoveryCodesRequest>
+    ValidateJson(payload): ValidateJson<GenerateRecoveryCodesRequest>,
 ) -> Result<Response<GenerateRecoveryCodesResponse>, ApiError> {
     let result = state
         .service
@@ -43,11 +49,13 @@ pub async fn generate_recovery_codes(
             identity,
             GenerateRecoveryCodeInput {
                 amount: payload.amount,
-                format: payload.code_format
-            }
+                format: payload.code_format,
+            },
         )
         .await
         .map_err(|e| ApiError::from(e))?;
 
-    Ok(Response::OK(GenerateRecoveryCodesResponse { codes: result.codes }))
+    Ok(Response::OK(GenerateRecoveryCodesResponse {
+        codes: result.codes,
+    }))
 }

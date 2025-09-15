@@ -188,48 +188,49 @@ impl CredentialRepository for PostgresCredentialRepository {
     }
 
     async fn create_recovery_code_credentials(
-            &self,
-            user_id: uuid::Uuid,
-            hashes: Vec<HashResult>,
-        ) -> Result<Vec<Credential>, CredentialError> {
-            let (now, _) = generate_timestamp();
+        &self,
+        user_id: uuid::Uuid,
+        hashes: Vec<HashResult>,
+    ) -> Result<Vec<Credential>, CredentialError> {
+        let (now, _) = generate_timestamp();
 
-            // Sqlx doesn't allow bulk insertion 😔
+        // Sqlx doesn't allow bulk insertion 😔
 
-            let credential_data = hashes.iter().map(|h| {
+        let credential_data = hashes
+            .iter()
+            .map(|h| {
                 serde_json::to_value(&h.credential_data)
                     .map_err(|_| CredentialError::CreateCredentialError)
-            }).collect::<Result<Vec<Value>, CredentialError>>()?;
+            })
+            .collect::<Result<Vec<Value>, CredentialError>>()?;
 
-            let futures = hashes
-                .into_iter()
-                .zip(credential_data.into_iter())
-                .map(|(h, cred_data)| {
-                    let payload = ActiveModel {
-                        id: Set(generate_uuid_v7()),
-                        salt: Set(Some(h.salt)),
-                        credential_type: Set("recovery-code".to_string()),
-                        user_id: Set(user_id.clone()),
-                        user_label: Set(None),
-                        secret_data: Set(h.hash),
-                        credential_data: Set(cred_data),
-                        created_at: Set(now.naive_utc()),
-                        updated_at: Set(now.naive_utc()),
-                        temporary: Set(Some(false)),
-                    };
+        let futures = hashes
+            .into_iter()
+            .zip(credential_data.into_iter())
+            .map(|(h, cred_data)| {
+                let payload = ActiveModel {
+                    id: Set(generate_uuid_v7()),
+                    salt: Set(Some(h.salt)),
+                    credential_type: Set("recovery-code".to_string()),
+                    user_id: Set(user_id.clone()),
+                    user_label: Set(None),
+                    secret_data: Set(h.hash),
+                    credential_data: Set(cred_data),
+                    created_at: Set(now.naive_utc()),
+                    updated_at: Set(now.naive_utc()),
+                    temporary: Set(Some(false)),
+                };
 
-                    payload.insert(&self.db)
-                });
+                payload.insert(&self.db)
+            });
 
-            let models: Vec<Model> = futures::future::try_join_all(futures)
-                .await
-                .map_err(|_| CredentialError::CreateCredentialError)?;
+        let models: Vec<Model> = futures::future::try_join_all(futures)
+            .await
+            .map_err(|_| CredentialError::CreateCredentialError)?;
 
-            Ok(
-                models
-                    .into_iter()
-                    .map(|m| m.into())
-                    .collect::<Vec<Credential>>()
-            )
+        Ok(models
+            .into_iter()
+            .map(|m| m.into())
+            .collect::<Vec<Credential>>())
     }
 }
