@@ -49,8 +49,8 @@ pub struct VerifyOtpOutput {
 }
 
 pub struct GenerateRecoveryCodeInput {
-    pub amount: usize,
-    pub authorization: String,
+    pub amount: u8,
+    pub format: String,
 }
 
 pub struct GenerateRecoveryCodeOutput {
@@ -59,6 +59,7 @@ pub struct GenerateRecoveryCodeOutput {
 
 pub struct BurnRecoveryCodeInput {
     pub session_code: String,
+    pub format: String,
     pub code: String,
 }
 
@@ -86,18 +87,19 @@ pub trait RecoveryCodeRepository: Send + Sync + Clone + 'static {
     /// Compares the given human-readable formatted code against a stored credential
     fn verify(
         &self,
-        in_code: String,
+        in_code: &MfaRecoveryCode,
         against: Credential,
     ) -> impl Future<Output = Result<Option<Credential>, CoreError>> + Send;
-
-    /// Formats the code in human-readable format
-    fn to_string(&self, code: &MfaRecoveryCode) -> String;
-    /// Decodes a human-readable formatted code into an MfaRecoveryCode
-    fn from_string(&self, code: String) -> Result<MfaRecoveryCode, CoreError>;
 }
 
 pub trait RecoveryCodeFormatter: Send + Sync + Clone + 'static {
+    /// Returns a formatted string representing the code
     fn format(code: &MfaRecoveryCode) -> String;
+    /// Returns wether or not a user string matches the expected format
+    /// for this formatter.
+    /// `decode` implementations must call this beforehand
+    fn validate(code: &str) -> bool;
+    /// Builds a code from a user string
     fn decode(code: String) -> Result<MfaRecoveryCode, CoreError>;
 }
 

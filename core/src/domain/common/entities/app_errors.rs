@@ -119,6 +119,9 @@ pub enum CoreError {
     #[error("TOTP verification failed: {0}")]
     TotpVerificationFailed(String),
 
+    #[error("Recovery code generation failed: {0}")]
+    RecoveryCodeGenError(String),
+
     #[error("Recovery code burning failed: {0}")]
     RecoveryCodeBurnError(String),
 

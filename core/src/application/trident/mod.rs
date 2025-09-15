@@ -24,6 +24,7 @@ use crate::{
         },
         user::{entities::RequiredAction, ports::UserRequiredActionRepository},
     },
+    infrastructure::recovery_code::formatters::RecoveryCodeFormat,
 };
 
 type HmacSha1 = Hmac<Sha1>;
@@ -110,6 +111,9 @@ impl TridentService for FerriskeyService {
             _ => return Err(CoreError::Forbidden("is not user".to_string())),
         };
 
+        let format = RecoveryCodeFormat::try_from(input.format)
+            .map_err(|e| CoreError::RecoveryCodeGenError(e))?;
+
         let stored_codes = self
             .credential_repository
             .get_credentials_by_user_id(user.id)
@@ -121,7 +125,7 @@ impl TridentService for FerriskeyService {
 
         let codes = self
             .recovery_code_repo
-            .generate_n_recovery_code(input.amount);
+            .generate_n_recovery_code(input.amount as usize);
 
         // Hash and store codes as credentials
         let _credentials = {
@@ -148,9 +152,12 @@ impl TridentService for FerriskeyService {
 
         // Once new codes stored it's now safe to invalidate the previous recovery codes
         let _ = {
-            let futures = stored_codes.into_iter().map(|c| self.credential_repository.delete_by_id(c.id));
+            let futures = stored_codes
+                .into_iter()
+                .map(|c| self.credential_repository.delete_by_id(c.id));
             try_join_all(futures).await
-        }.map_err(|e| {
+        }
+        .map_err(|e| {
             tracing::error!("Failed to delete previously fetched credentials: {e}");
             CoreError::InternalServerError
         })?;
@@ -159,7 +166,7 @@ impl TridentService for FerriskeyService {
         // distribution to the user
         let codes = codes
             .into_iter()
-            .map(|c| self.recovery_code_repo.to_string(&c))
+            .map(|c| self.recovery_code_repo.to_string(&c, format.clone()))
             .collect::<Vec<String>>();
 
         Ok(GenerateRecoveryCodeOutput { codes })
@@ -177,6 +184,11 @@ impl TridentService for FerriskeyService {
 
         let session_code =
             Uuid::parse_str(&input.session_code).map_err(|_| CoreError::SessionCreateError)?;
+
+        let format = RecoveryCodeFormat::try_from(input.format)
+            .map_err(|e| CoreError::RecoveryCodeBurnError(e))?;
+
+        let user_code = self.recovery_code_repo.from_string(input.code, format)?;
 
         let auth_session = self
             .auth_session_repository
@@ -196,10 +208,9 @@ impl TridentService for FerriskeyService {
             .collect::<Vec<Credential>>();
 
         let verify_results = {
-            let futures = recovery_code_creds.into_iter().map(|code_cred| {
-                self.recovery_code_repo
-                    .verify(input.code.clone(), code_cred)
-            });
+            let futures = recovery_code_creds
+                .into_iter()
+                .map(|code_cred| self.recovery_code_repo.verify(&user_code, code_cred));
 
             try_join_all(futures).await
         }?;

@@ -1,32 +1,24 @@
+pub mod formatters;
+
 use crate::domain::common::entities::app_errors::CoreError;
 use crate::domain::credential::entities::Credential;
 use crate::domain::crypto::entities::HashResult;
 use crate::domain::trident::entities::MfaRecoveryCode;
-use crate::domain::trident::ports::RecoveryCodeRepository;
-use crate::infrastructure::repositories::random_bytes_recovery_code::{
-    B32Split4RecoveryCodeFormatter, RandBytesRecoveryCodeRepository,
+use crate::domain::trident::ports::{RecoveryCodeFormatter, RecoveryCodeRepository};
+use crate::infrastructure::recovery_code::formatters::{
+    B32Split4RecoveryCodeFormatter, RecoveryCodeFormat,
 };
+use crate::infrastructure::repositories::random_bytes_recovery_code::RandBytesRecoveryCodeRepository;
 
 #[derive(Clone)]
 pub enum RecoveryCodeRepoAny {
-    RandomBytes10(RandBytesRecoveryCodeRepository<10, B32Split4RecoveryCodeFormatter>),
+    RandomBytes10(RandBytesRecoveryCodeRepository<10>),
 }
 
 impl RecoveryCodeRepository for RecoveryCodeRepoAny {
     fn generate_recovery_code(&self) -> MfaRecoveryCode {
         match self {
             RecoveryCodeRepoAny::RandomBytes10(repo) => repo.generate_recovery_code(),
-        }
-    }
-
-    fn to_string(&self, code: &MfaRecoveryCode) -> String {
-        match self {
-            RecoveryCodeRepoAny::RandomBytes10(repo) => repo.to_string(&code),
-        }
-    }
-    fn from_string(&self, code: String) -> Result<MfaRecoveryCode, CoreError> {
-        match self {
-            RecoveryCodeRepoAny::RandomBytes10(repo) => repo.from_string(code),
         }
     }
 
@@ -38,11 +30,31 @@ impl RecoveryCodeRepository for RecoveryCodeRepoAny {
 
     async fn verify(
         &self,
-        in_code: String,
+        in_code: &MfaRecoveryCode,
         against: Credential,
     ) -> Result<Option<Credential>, CoreError> {
         match self {
             RecoveryCodeRepoAny::RandomBytes10(repo) => repo.verify(in_code, against).await,
+        }
+    }
+}
+
+impl RecoveryCodeRepoAny {
+    /// Formats the code in human-readable format
+    pub fn to_string(&self, code: &MfaRecoveryCode, format: RecoveryCodeFormat) -> String {
+        match format {
+            RecoveryCodeFormat::B32Split4 => B32Split4RecoveryCodeFormatter::format(code),
+        }
+    }
+
+    /// Decodes a human-readable formatted code into an MfaRecoveryCode
+    pub fn from_string(
+        &self,
+        code: String,
+        format: RecoveryCodeFormat,
+    ) -> Result<MfaRecoveryCode, CoreError> {
+        match format {
+            RecoveryCodeFormat::B32Split4 => B32Split4RecoveryCodeFormatter::decode(code),
         }
     }
 }
