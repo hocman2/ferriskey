@@ -1,4 +1,5 @@
 use axum::{Extension, extract::State};
+use axum_cookie::CookieManager;
 use serde::{Deserialize, Serialize};
 use ferriskey_core::domain::{
     authentication::value_objects::Identity, trident::ports::{BurnRecoveryCodeInput, TridentService}
@@ -10,7 +11,6 @@ use crate::application::http::server::{api_entities::{api_error::{ApiError, Vali
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, Validate)]
 pub struct BurnRecoveryCodeRequest {
-    session_code: String,
     recovery_code: String,
     recovery_code_format: String,
 }
@@ -35,14 +35,18 @@ pub struct BurnRecoveryCodeResponse {
 pub async fn burn_recovery_code(
     State(state): State<AppState>,
     Extension(identity): Extension<Identity>,
+    cookie: CookieManager,
     ValidateJson(payload): ValidateJson<BurnRecoveryCodeRequest>
 ) -> Result<Response<BurnRecoveryCodeResponse>, ApiError> {
+    let session_code = cookie.get("FERRISKEY_SESSION").unwrap();
+    let session_code = session_code.value().to_string();
+
     let result = state
         .service
         .burn_recovery_code(
             identity,
             BurnRecoveryCodeInput {
-                session_code: payload.session_code,
+                session_code,
                 format: payload.recovery_code_format,
                 code: payload.recovery_code,
             }
