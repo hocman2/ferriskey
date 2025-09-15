@@ -58,4 +58,10 @@ pub trait CredentialRepository: Clone + Send + Sync + 'static {
         label: Option<String>,
         credential_data: serde_json::Value,
     ) -> impl Future<Output = Result<Credential, CredentialError>> + Send;
+
+    fn create_recovery_code_credentials(
+        &self,
+        user_id: Uuid,
+        hash: Vec<HashResult>,
+    ) -> impl Future<Output = Result<Vec<Credential>, CredentialError>> + Send;
 }
