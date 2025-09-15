@@ -132,7 +132,9 @@ impl FerriskeyService {
             credential_repository: repos.credential_repository,
             hasher_repository: repos.hasher_repository,
             auth_session_repository: repos.auth_session_repository,
+            recovery_code_repo: repos.recovery_code_repository,
             redirect_uri_repository: repos.redirect_uri_repository,
+            refresh_token_repository: repos.refresh_token_repository,
             role_repository: repos.role_repository,
             keystore_repository: repos.keystore_repository,
             user_role_repository: repos.user_role_repository,
@@ -140,7 +142,6 @@ impl FerriskeyService {
             health_check_repository: repos.health_check_repository,
             webhook_repository: repos.webhook_repository,
             webhook_notifier_repository: repos.webhook_notifier_repository,
-            recovery_code_repo: repos.recovery_code_repository,
             config,
 
             policy,

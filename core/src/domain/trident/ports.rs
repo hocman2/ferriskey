@@ -5,7 +5,7 @@ use crate::domain::{
     common::entities::app_errors::CoreError,
     credential::entities::Credential,
     crypto::entities::HashResult,
-    trident::entities::{MfaRecoveryCode, TotpError, TotpSecret},
+    trident::entities::{MfaRecoveryCode, TotpSecret},
 };
 
 pub trait TotpService: Send + Sync + Clone + 'static {
