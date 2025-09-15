@@ -1,4 +1,4 @@
-use crate::entity::credentials::{ActiveModel, Entity as CredentialEntity, Model};
+use crate::entity::credentials::{ActiveModel, Entity as CredentialEntity};
 use chrono::{TimeZone, Utc};
 use sea_orm::{
     ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait, ModelTrait,
@@ -191,10 +191,8 @@ impl CredentialRepository for PostgresCredentialRepository {
         &self,
         user_id: uuid::Uuid,
         hashes: Vec<HashResult>,
-    ) -> Result<Vec<Credential>, CredentialError> {
+    ) -> Result<(), CredentialError> {
         let (now, _) = generate_timestamp();
-
-        // Sqlx doesn't allow bulk insertion 😔
 
         let credential_data = hashes
             .iter()
@@ -204,11 +202,11 @@ impl CredentialRepository for PostgresCredentialRepository {
             })
             .collect::<Result<Vec<Value>, CredentialError>>()?;
 
-        let futures = hashes
+        let models = hashes
             .into_iter()
             .zip(credential_data.into_iter())
             .map(|(h, cred_data)| {
-                let payload = ActiveModel {
+                ActiveModel {
                     id: Set(generate_uuid_v7()),
                     salt: Set(Some(h.salt)),
                     credential_type: Set("recovery-code".to_string()),
@@ -219,18 +217,14 @@ impl CredentialRepository for PostgresCredentialRepository {
                     created_at: Set(now.naive_utc()),
                     updated_at: Set(now.naive_utc()),
                     temporary: Set(Some(false)),
-                };
-
-                payload.insert(&self.db)
+                }
             });
 
-        let models: Vec<Model> = futures::future::try_join_all(futures)
+        let _ = CredentialEntity::insert_many(models)
+            .exec(&self.db)
             .await
             .map_err(|_| CredentialError::CreateCredentialError)?;
 
-        Ok(models
-            .into_iter()
-            .map(|m| m.into())
-            .collect::<Vec<Credential>>())
+        Ok(())
     }
 }

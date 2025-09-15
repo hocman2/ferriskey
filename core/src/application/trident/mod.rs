@@ -127,21 +127,20 @@ impl TridentService for FerriskeyService {
             .recovery_code_repo
             .generate_n_recovery_code(input.amount as usize);
 
-        let _credentials = {
-            // These are probably not concurrent jobs !
-            // They should be parallelized with threads instead of IO tasks for faster operation
-            let futures = codes
-                .iter()
-                .map(|code| self.recovery_code_repo.secure_for_storage(&code));
-            let secure_codes = try_join_all(futures).await?;
-            self.credential_repository
-                .create_recovery_code_credentials(user.id, secure_codes)
-                .await
-        }
-        .map_err(|e| {
-            tracing::error!("{e}");
-            CoreError::InternalServerError
-        })?;
+        // These are probably not concurrent jobs !
+        // They should be parallelized with threads instead of IO tasks for faster operation
+        let futures = codes
+            .iter()
+            .map(|code| self.recovery_code_repo.secure_for_storage(&code));
+        let secure_codes = try_join_all(futures).await?;
+
+        self.credential_repository
+            .create_recovery_code_credentials(user.id, secure_codes)
+            .await
+            .map_err(|e| {
+                tracing::error!("{e}");
+                CoreError::InternalServerError
+            })?;
 
         // Once new codes stored it's now safe to invalidate the previous recovery codes
         let _ = {

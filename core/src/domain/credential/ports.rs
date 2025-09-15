@@ -63,5 +63,5 @@ pub trait CredentialRepository: Clone + Send + Sync + 'static {
         &self,
         user_id: Uuid,
         hash: Vec<HashResult>,
-    ) -> impl Future<Output = Result<Vec<Credential>, CredentialError>> + Send;
+    ) -> impl Future<Output = Result<(), CredentialError>> + Send;
 }
