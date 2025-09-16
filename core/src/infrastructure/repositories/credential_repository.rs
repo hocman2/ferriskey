@@ -205,19 +205,17 @@ impl CredentialRepository for PostgresCredentialRepository {
         let models = hashes
             .into_iter()
             .zip(credential_data.into_iter())
-            .map(|(h, cred_data)| {
-                ActiveModel {
-                    id: Set(generate_uuid_v7()),
-                    salt: Set(Some(h.salt)),
-                    credential_type: Set("recovery-code".to_string()),
-                    user_id: Set(user_id),
-                    user_label: Set(None),
-                    secret_data: Set(h.hash),
-                    credential_data: Set(cred_data),
-                    created_at: Set(now.naive_utc()),
-                    updated_at: Set(now.naive_utc()),
-                    temporary: Set(Some(false)),
-                }
+            .map(|(h, cred_data)| ActiveModel {
+                id: Set(generate_uuid_v7()),
+                salt: Set(Some(h.salt)),
+                credential_type: Set("recovery-code".to_string()),
+                user_id: Set(user_id),
+                user_label: Set(None),
+                secret_data: Set(h.hash),
+                credential_data: Set(cred_data),
+                created_at: Set(now.naive_utc()),
+                updated_at: Set(now.naive_utc()),
+                temporary: Set(Some(false)),
             });
 
         let _ = CredentialEntity::insert_many(models)

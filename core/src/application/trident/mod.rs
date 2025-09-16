@@ -111,8 +111,8 @@ impl TridentService for FerriskeyService {
             _ => return Err(CoreError::Forbidden("is not user".to_string())),
         };
 
-        let format = RecoveryCodeFormat::try_from(input.format)
-            .map_err(CoreError::RecoveryCodeGenError)?;
+        let format =
+            RecoveryCodeFormat::try_from(input.format).map_err(CoreError::RecoveryCodeGenError)?;
 
         let stored_codes = self
             .credential_repository
@@ -177,8 +177,8 @@ impl TridentService for FerriskeyService {
         let session_code =
             Uuid::parse_str(&input.session_code).map_err(|_| CoreError::SessionCreateError)?;
 
-        let format = RecoveryCodeFormat::try_from(input.format)
-            .map_err(CoreError::RecoveryCodeBurnError)?;
+        let format =
+            RecoveryCodeFormat::try_from(input.format).map_err(CoreError::RecoveryCodeBurnError)?;
 
         let user_code = self.recovery_code_repo.decode_string(input.code, format)?;
 
