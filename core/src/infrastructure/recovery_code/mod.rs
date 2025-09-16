@@ -24,7 +24,7 @@ impl RecoveryCodeRepository for RecoveryCodeRepoAny {
 
     async fn secure_for_storage(&self, code: &MfaRecoveryCode) -> Result<HashResult, CoreError> {
         match self {
-            RecoveryCodeRepoAny::RandomBytes10(repo) => repo.secure_for_storage(&code).await,
+            RecoveryCodeRepoAny::RandomBytes10(repo) => repo.secure_for_storage(code).await,
         }
     }
 
@@ -41,14 +41,14 @@ impl RecoveryCodeRepository for RecoveryCodeRepoAny {
 
 impl RecoveryCodeRepoAny {
     /// Formats the code in human-readable format
-    pub fn to_string(&self, code: &MfaRecoveryCode, format: RecoveryCodeFormat) -> String {
+    pub fn format_code(&self, code: &MfaRecoveryCode, format: RecoveryCodeFormat) -> String {
         match format {
             RecoveryCodeFormat::B32Split4 => B32Split4RecoveryCodeFormatter::format(code),
         }
     }
 
     /// Decodes a human-readable formatted code into an MfaRecoveryCode
-    pub fn from_string(
+    pub fn decode_string(
         &self,
         code: String,
         format: RecoveryCodeFormat,

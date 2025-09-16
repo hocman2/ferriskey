@@ -69,7 +69,7 @@ impl RecoveryCodeFormatter for B32Split4RecoveryCodeFormatter {
 
         code_str = code_str.replace(Self::SEPARATOR, "");
         base32::decode(base32::Alphabet::Z, code_str.as_str())
-            .map(|bytes| MfaRecoveryCode(bytes))
+            .map(MfaRecoveryCode)
             .ok_or(CoreError::Invalid)
     }
 }

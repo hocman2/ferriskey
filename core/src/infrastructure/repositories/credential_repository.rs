@@ -210,7 +210,7 @@ impl CredentialRepository for PostgresCredentialRepository {
                     id: Set(generate_uuid_v7()),
                     salt: Set(Some(h.salt)),
                     credential_type: Set("recovery-code".to_string()),
-                    user_id: Set(user_id.clone()),
+                    user_id: Set(user_id),
                     user_label: Set(None),
                     secret_data: Set(h.hash),
                     credential_data: Set(cred_data),

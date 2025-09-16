@@ -59,7 +59,7 @@ pub async fn burn_recovery_code(
             },
         )
         .await
-        .map_err(|e| ApiError::from(e))?;
+        .map_err(ApiError::from)?;
 
     Ok(Response::OK(BurnRecoveryCodeResponse {
         login_url: result.login_url,

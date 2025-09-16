@@ -112,7 +112,7 @@ impl TridentService for FerriskeyService {
         };
 
         let format = RecoveryCodeFormat::try_from(input.format)
-            .map_err(|e| CoreError::RecoveryCodeGenError(e))?;
+            .map_err(CoreError::RecoveryCodeGenError)?;
 
         let stored_codes = self
             .credential_repository
@@ -131,7 +131,7 @@ impl TridentService for FerriskeyService {
         // They should be parallelized with threads instead of IO tasks for faster operation
         let futures = codes
             .iter()
-            .map(|code| self.recovery_code_repo.secure_for_storage(&code));
+            .map(|code| self.recovery_code_repo.secure_for_storage(code));
         let secure_codes = try_join_all(futures).await?;
 
         self.credential_repository
@@ -158,7 +158,7 @@ impl TridentService for FerriskeyService {
         // distribution to the user
         let codes = codes
             .into_iter()
-            .map(|c| self.recovery_code_repo.to_string(&c, format.clone()))
+            .map(|c| self.recovery_code_repo.format_code(&c, format.clone()))
             .collect::<Vec<String>>();
 
         Ok(GenerateRecoveryCodeOutput { codes })
@@ -178,9 +178,9 @@ impl TridentService for FerriskeyService {
             Uuid::parse_str(&input.session_code).map_err(|_| CoreError::SessionCreateError)?;
 
         let format = RecoveryCodeFormat::try_from(input.format)
-            .map_err(|e| CoreError::RecoveryCodeBurnError(e))?;
+            .map_err(CoreError::RecoveryCodeBurnError)?;
 
-        let user_code = self.recovery_code_repo.from_string(input.code, format)?;
+        let user_code = self.recovery_code_repo.decode_string(input.code, format)?;
 
         let auth_session = self
             .auth_session_repository

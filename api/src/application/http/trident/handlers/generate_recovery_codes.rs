@@ -53,7 +53,7 @@ pub async fn generate_recovery_codes(
             },
         )
         .await
-        .map_err(|e| ApiError::from(e))?;
+        .map_err(ApiError::from)?;
 
     Ok(Response::OK(GenerateRecoveryCodesResponse {
         codes: result.codes,

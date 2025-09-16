@@ -59,14 +59,12 @@ pub type DefaultJwtService = JwtServiceImpl<RefreshTokenRepoAny, KeyStoreRepoAny
 
 #[derive(Clone)]
 pub struct FerriskeyService {
-    pub(crate) config: FerriskeyConfig,
     pub(crate) realm_repository: RealmRepoAny,
     pub(crate) client_repository: ClientRepoAny,
     pub(crate) user_repository: UserRepoAny,
     pub(crate) credential_repository: CredentialRepoAny,
     pub(crate) hasher_repository: HasherRepoAny,
     pub(crate) auth_session_repository: AuthSessionRepoAny,
-    pub(crate) refresh_token_repository: RefreshTokenRepoAny,
     pub(crate) redirect_uri_repository: RedirectUriRepoAny,
     pub(crate) role_repository: RoleRepoAny,
     pub(crate) keystore_repository: KeyStoreRepoAny,
@@ -134,7 +132,6 @@ impl FerriskeyService {
             auth_session_repository: repos.auth_session_repository,
             recovery_code_repo: repos.recovery_code_repository,
             redirect_uri_repository: repos.redirect_uri_repository,
-            refresh_token_repository: repos.refresh_token_repository,
             role_repository: repos.role_repository,
             keystore_repository: repos.keystore_repository,
             user_role_repository: repos.user_role_repository,
@@ -142,7 +139,6 @@ impl FerriskeyService {
             health_check_repository: repos.health_check_repository,
             webhook_repository: repos.webhook_repository,
             webhook_notifier_repository: repos.webhook_notifier_repository,
-            config,
 
             policy,
             grant_type_strategies,
