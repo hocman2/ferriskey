@@ -43,4 +43,16 @@ impl AuthSessionRepository for AuthSessionRepoAny {
             }
         }
     }
+
+    async fn save_webauthn_challenge(
+        &self,
+        session_code: Uuid,
+        challenge: String,
+    ) -> Result<AuthSession, AuthenticationError> {
+        match self {
+            AuthSessionRepoAny::Postgres(repo) => {
+                repo.save_webauthn_challenge(session_code, challenge).await
+            }
+        }
+    }
 }
