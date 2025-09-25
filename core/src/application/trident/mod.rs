@@ -20,10 +20,11 @@ use crate::{
             },
             ports::{
                 BurnRecoveryCodeInput, BurnRecoveryCodeOutput, ChallengeOtpInput,
-                ChallengeOtpOutput, ChallengeWebAuthnInput, ChallengeWebAuthnOutput,
-                GenerateRecoveryCodeInput, GenerateRecoveryCodeOutput, RecoveryCodeRepository,
-                SetupOtpInput, SetupOtpOutput, TridentService, UpdatePasswordInput, VerifyOtpInput,
-                VerifyOtpOutput,
+                ChallengeOtpOutput, GenerateRecoveryCodeInput, GenerateRecoveryCodeOutput,
+                RecoveryCodeRepository, SetupOtpInput, SetupOtpOutput, TridentService,
+                UpdatePasswordInput, VerifyOtpInput, VerifyOtpOutput,
+                WebAuthnChallengeCreationInput, WebAuthnChallengeCreationOutput,
+                WebAuthnCredentialCreationInput, WebAuthnCredentialCreationOutput,
             },
         },
         user::{entities::RequiredAction, ports::UserRequiredActionRepository},
@@ -254,11 +255,11 @@ impl TridentService for FerriskeyService {
         Ok(BurnRecoveryCodeOutput { login_url })
     }
 
-    async fn challenge_webauthn(
+    async fn webauthn_challenge_for_credential_creation(
         &self,
         identity: Identity,
-        input: ChallengeWebAuthnInput,
-    ) -> Result<ChallengeWebAuthnOutput, CoreError> {
+        input: WebAuthnChallengeCreationInput,
+    ) -> Result<WebAuthnChallengeCreationOutput, CoreError> {
         let challenge = WebAuthnChallenge::generate()?;
         let session_code =
             Uuid::parse_str(&input.session_code).map_err(|_| CoreError::SessionCreateError)?;
@@ -274,7 +275,7 @@ impl TridentService for FerriskeyService {
             .await
             .map_err(|_| CoreError::InternalServerError);
 
-        Ok(ChallengeWebAuthnOutput {
+        Ok(WebAuthnChallengeCreationOutput {
             challenge,
             rp: WebAuthnRelayingParty {
                 id: input.server_host.clone(),
@@ -293,6 +294,18 @@ impl TridentService for FerriskeyService {
             hints: vec![],
             timeout: 60000,
         })
+    }
+
+    async fn finalize_webauthn_credential_creation(
+        &self,
+        identity: Identity,
+        input: WebAuthnCredentialCreationInput,
+    ) -> Result<WebAuthnCredentialCreationOutput, CoreError> {
+        if input.typ != "public-key" {
+            return Err(CoreError::Invalid);
+        }
+
+        Ok(WebAuthnCredentialCreationOutput {})
     }
 
     async fn challenge_otp(
