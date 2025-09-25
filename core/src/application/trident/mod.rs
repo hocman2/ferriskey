@@ -15,8 +15,8 @@ use crate::{
         crypto::ports::HasherRepository,
         trident::{
             entities::{
-                TotpSecret, WebAuthnAttestationConveyance, WebAuthnChallenge,
-                WebAuthnRelayingParty, WebAuthnUser,
+                SigningAlgorithm, TotpSecret, WebAuthnAttestationConveyance, WebAuthnChallenge,
+                WebAuthnPubKeyCredParams, WebAuthnRelayingParty, WebAuthnUser,
             },
             ports::{
                 BurnRecoveryCodeInput, BurnRecoveryCodeOutput, ChallengeOtpInput,
@@ -282,11 +282,15 @@ impl TridentService for FerriskeyService {
             },
             user: WebAuthnUser::from(user),
             attestation: WebAuthnAttestationConveyance::Direct,
-            attestation_formats: None,
+            attestation_formats: vec![],
             // Add supported signing algorithms here
-            pub_key_cred_params: vec![],
-            exclude_credentials: None,
-            hints: None,
+            pub_key_cred_params: vec![
+                WebAuthnPubKeyCredParams::new(SigningAlgorithm::ES256),
+                WebAuthnPubKeyCredParams::new(SigningAlgorithm::RS256),
+                WebAuthnPubKeyCredParams::new(SigningAlgorithm::EdDSA),
+            ],
+            exclude_credentials: vec![],
+            hints: vec![],
             timeout: 60000,
         })
     }
