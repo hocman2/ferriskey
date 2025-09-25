@@ -20,7 +20,8 @@ use crate::{
         trident::{
             entities::{
                 SigningAlgorithm, TotpSecret, WebAuthnAttestationConveyance, WebAuthnChallenge,
-                WebAuthnPubKeyCredParams, WebAuthnRelayingParty, WebAuthnUser,
+                WebAuthnPubKeyCredParams, WebAuthnPublicKeyCredentialCreationOptions,
+                WebAuthnRelayingParty, WebAuthnUser,
             },
             ports::{
                 BurnRecoveryCodeInput, BurnRecoveryCodeOutput, ChallengeOtpInput,
@@ -321,7 +322,7 @@ where
             .await
             .map_err(|_| CoreError::InternalServerError);
 
-        Ok(WebAuthnChallengeCreationOutput {
+        let creation_opts = WebAuthnPublicKeyCredentialCreationOptions {
             challenge,
             rp: WebAuthnRelayingParty {
                 id: input.server_host.clone(),
@@ -339,7 +340,9 @@ where
             exclude_credentials: vec![],
             hints: vec![],
             timeout: 60000,
-        })
+        };
+
+        Ok(WebAuthnChallengeCreationOutput(creation_opts))
     }
 
     async fn finalize_webauthn_credential_creation(
