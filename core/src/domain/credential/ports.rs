@@ -7,6 +7,7 @@ use crate::domain::{
         Credential, CredentialError, CredentialOverview, DeleteCredentialInput, GetCredentialsInput,
     },
     crypto::entities::HashResult,
+    trident::entities::WebAuthnAuthenticatorAttestationResponse,
 };
 
 pub trait CredentialService: Clone + Send + Sync + 'static {
@@ -64,4 +65,10 @@ pub trait CredentialRepository: Clone + Send + Sync + 'static {
         user_id: Uuid,
         hash: Vec<HashResult>,
     ) -> impl Future<Output = Result<(), CredentialError>> + Send;
+
+    fn create_webauthn_credential(
+        &self,
+        user_id: Uuid,
+        attestation_response: WebAuthnAuthenticatorAttestationResponse,
+    ) -> impl Future<Output = Result<Credential, CredentialError>> + Send;
 }

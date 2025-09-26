@@ -1,6 +1,7 @@
 use crate::domain::credential::entities::{Credential, CredentialError};
 use crate::domain::credential::ports::CredentialRepository;
 use crate::domain::crypto::entities::HashResult;
+use crate::domain::trident::entities::WebAuthnAuthenticatorAttestationResponse;
 use crate::infrastructure::repositories::credential_repository::PostgresCredentialRepository;
 use serde_json::Value;
 use uuid::Uuid;
@@ -84,6 +85,19 @@ impl CredentialRepository for CredentialRepoAny {
         match self {
             CredentialRepoAny::Postgres(repo) => {
                 repo.create_recovery_code_credentials(user_id, hashes).await
+            }
+        }
+    }
+
+    async fn create_webauthn_credential(
+        &self,
+        user_id: Uuid,
+        attestation_response: WebAuthnAuthenticatorAttestationResponse,
+    ) -> Result<Credential, CredentialError> {
+        match self {
+            CredentialRepoAny::Postgres(repo) => {
+                repo.create_webauthn_credential(user_id, attestation_response)
+                    .await
             }
         }
     }
