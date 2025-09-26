@@ -11,7 +11,10 @@ use crate::{
     domain::{
         authentication::{ports::AuthSessionRepository, value_objects::Identity},
         common::{entities::app_errors::CoreError, generate_random_string},
-        credential::{entities::Credential, ports::CredentialRepository},
+        credential::{
+            entities::{Credential, CredentialData},
+            ports::CredentialRepository,
+        },
         crypto::ports::HasherRepository,
         trident::{
             entities::{
@@ -205,28 +208,51 @@ impl TridentService for FerriskeyService {
             .filter(|cred| cred.credential_type == "recovery-code")
             .collect::<Vec<Credential>>();
 
-        let verify_results = {
-            let futures = recovery_code_creds
-                .into_iter()
-                .map(|code_cred| self.recovery_code_repo.verify(&user_code, code_cred));
+        // This is a suboptimal way to do it but I was having ownership errors
+        let mut burnt_code: Option<Credential> = None;
+        for code_cred in recovery_code_creds.into_iter() {
+            if let CredentialData::Hash {
+                hash_iterations,
+                algorithm,
+            } = &code_cred.credential_data
+            {
+                let salt = code_cred
+                    .salt
+                    .as_ref()
+                    .ok_or(CoreError::InternalServerError)?;
 
-            try_join_all(futures).await
-        }?;
+                let result = self
+                    .recovery_code_repo
+                    .verify(
+                        &user_code,
+                        &code_cred.secret_data,
+                        *hash_iterations,
+                        algorithm,
+                        salt,
+                    )
+                    .await?;
+
+                if result {
+                    burnt_code = Some(code_cred);
+                    break;
+                }
+            } else {
+                tracing::error!(
+                    "A recovery code credential has no Hash credential data. This is a server bug. Do not forward this message back to the user"
+                );
+                return Err(CoreError::InternalServerError);
+            }
+        }
 
         // This doesn't check if there are multiple matches because it is not necessarly a bug
         // It is highly unlikely but a user may have multiple identical recovery codes
         // or it could also be a duplicate storage bug.
         // Anyway, this is not the place to check such a bug
-        let burnt_code = verify_results
-            .into_iter()
-            .find(|c| c.is_some())
-            .ok_or_else(|| {
-                CoreError::RecoveryCodeBurnError(
-                    "The provided code is invalid or has already been used".to_string(),
-                )
-            })?
-            // Safe, we checked above
-            .unwrap();
+        let burnt_code = burnt_code.ok_or_else(|| {
+            CoreError::RecoveryCodeBurnError(
+                "The provided code is invalid or has already been used".to_string(),
+            )
+        })?;
 
         self
             .credential_repository
@@ -301,7 +327,7 @@ impl TridentService for FerriskeyService {
 
     async fn finalize_webauthn_credential_creation(
         &self,
-        identity: Identity,
+        _identity: Identity,
         input: WebAuthnCredentialCreationInput,
     ) -> Result<WebAuthnCredentialCreationOutput, CoreError> {
         if input.typ != "public-key" {
