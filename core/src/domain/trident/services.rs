@@ -31,10 +31,9 @@ use crate::{
                 BurnRecoveryCodeInput, BurnRecoveryCodeOutput, ChallengeOtpInput,
                 ChallengeOtpOutput, GenerateRecoveryCodeInput, GenerateRecoveryCodeOutput,
                 RecoveryCodeRepository, SetupOtpInput, SetupOtpOutput, TridentService,
-                UpdatePasswordInput, VerifyOtpInput, VerifyOtpOutput,
-                WebAuthnChallengeCreationInput, WebAuthnChallengeCreationOutput,
-                WebAuthnCredentialCreationInput, WebAuthnCredentialCreationOutput,
-	    entities::{TotpSecret, WebAuthnChallenge},
+                UpdatePasswordInput, VerifyOtpInput, VerifyOtpOutput, WebAuthnCreatePublicKeyInput,
+                WebAuthnCreatePublicKeyOutput, WebAuthnValidatePublicKeyInput,
+                WebAuthnValidatePublicKeyOutput,
             },
         },
         user::{
@@ -328,11 +327,11 @@ where
         Ok(BurnRecoveryCodeOutput { login_url })
     }
 
-    async fn webauthn_challenge_for_credential_creation(
+    async fn webauthn_create_public_key(
         &self,
         identity: Identity,
-        input: WebAuthnChallengeCreationInput,
-    ) -> Result<WebAuthnChallengeCreationOutput, CoreError> {
+        input: WebAuthnCreatePublicKeyInput,
+    ) -> Result<WebAuthnCreatePublicKeyOutput, CoreError> {
         let challenge = WebAuthnChallenge::generate()?;
         let session_code =
             Uuid::parse_str(&input.session_code).map_err(|_| CoreError::SessionCreateError)?;
@@ -368,14 +367,14 @@ where
             timeout: 60000,
         };
 
-        Ok(WebAuthnChallengeCreationOutput(creation_opts))
+        Ok(WebAuthnCreatePublicKeyOutput(creation_opts))
     }
 
-    async fn finalize_webauthn_credential_creation(
+    async fn webauthn_validate_public_key(
         &self,
         identity: Identity,
-        input: WebAuthnCredentialCreationInput,
-    ) -> Result<WebAuthnCredentialCreationOutput, CoreError> {
+        input: WebAuthnValidatePublicKeyInput,
+    ) -> Result<WebAuthnValidatePublicKeyOutput, CoreError> {
         if input.typ != "public-key" {
             return Err(CoreError::Invalid);
         }
@@ -390,7 +389,7 @@ where
             .await
             .map_err(|_| CoreError::InternalServerError)?;
 
-        Ok(WebAuthnCredentialCreationOutput {})
+        Ok(WebAuthnValidatePublicKeyOutput {})
     }
 
     async fn challenge_otp(
