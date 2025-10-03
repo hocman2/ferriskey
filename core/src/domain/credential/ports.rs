@@ -72,4 +72,9 @@ pub trait CredentialRepository: Clone + Send + Sync + 'static {
         webauthn_credential_id: WebAuthnCredentialIdGroup,
         attestation_response: WebAuthnAuthenticatorAttestationResponse,
     ) -> impl Future<Output = Result<Credential, CredentialError>> + Send;
+
+    fn get_webauthn_public_key_credentials(
+        &self,
+        user_id: Uuid,
+    ) -> impl Future<Output = Result<Vec<Credential>, CredentialError>> + Send;
 }
