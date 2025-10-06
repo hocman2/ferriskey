@@ -45,6 +45,10 @@ pub struct WebAuthnPublicKeyRequestOptionsInput {
 pub struct WebAuthnPublicKeyRequestOptionsOutput(pub WebAuthnPublicKeyCredentialRequestOptions);
 
 pub struct WebAuthnPublicKeyAuthenticateInput {
+    // Trident required fields
+    pub session_code: Uuid,
+
+    // Standard webauthn fields
     pub credential: WebAuthnCredentialIdGroup,
     pub response: WebAuthnAuthenticatorAssertionResponse,
     pub typ: String,
@@ -172,6 +176,11 @@ pub trait TridentService: Send + Sync + Clone + 'static {
         identity: Identity,
         input: WebAuthnPublicKeyRequestOptionsInput,
     ) -> impl Future<Output = Result<WebAuthnPublicKeyRequestOptionsOutput, CoreError>> + Send;
+    fn webauthn_public_key_authenticate(
+        &self,
+        identity: Identity,
+        input: WebAuthnPublicKeyAuthenticateInput,
+    ) -> impl Future<Output = Result<WebAuthnPublicKeyAuthenticateOutput, CoreError>> + Send;
 
     fn challenge_otp(
         &self,
