@@ -73,12 +73,12 @@ pub trait AuthSessionRepository: Clone + Send + Sync + 'static {
     fn save_webauthn_challenge(
         &self,
         session_code: Uuid,
-        challenge: String,
+        challenge: &[u8],
     ) -> impl Future<Output = Result<AuthSession, AuthenticationError>> + Send;
     fn take_webauthn_challenge(
         &self,
         session_code: Uuid,
-    ) -> impl Future<Output = Option<WebAuthnChallenge>> + Send;
+    ) -> impl Future<Output = Result<Option<WebAuthnChallenge>, AuthenticationError>> + Send;
 }
 
 pub trait AuthService: Clone + Send + Sync + 'static {
