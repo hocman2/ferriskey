@@ -1,15 +1,22 @@
-use crate::{
-    application::common::permissions::FerriskeyPolicy,
-    domain::{
-        authentication::value_objects::Identity,
-        common::{entities::app_errors::CoreError, policies::Policy},
-        realm::{entities::Realm, ports::RealmPolicy},
-        role::entities::permission::Permissions,
+use crate::domain::{
+    authentication::value_objects::Identity,
+    client::ports::{ClientPolicy, ClientRepository},
+    common::{
+        entities::app_errors::CoreError,
+        policies::{FerriskeyPolicy, Policy},
     },
+    realm::entities::Realm,
+    role::entities::permission::Permissions,
+    user::ports::{UserRepository, UserRoleRepository},
 };
 
-impl RealmPolicy for FerriskeyPolicy {
-    async fn can_view_realm(
+impl<U, C, UR> ClientPolicy for FerriskeyPolicy<U, C, UR>
+where
+    U: UserRepository,
+    C: ClientRepository,
+    UR: UserRoleRepository,
+{
+    async fn can_create_client(
         &self,
         identity: Identity,
         target_realm: Realm,
@@ -22,17 +29,13 @@ impl RealmPolicy for FerriskeyPolicy {
 
         let has_permission = Permissions::has_one_of_permissions(
             &permissions.iter().cloned().collect::<Vec<Permissions>>(),
-            &[
-                Permissions::ManageRealm,
-                Permissions::ManageRealm,
-                Permissions::ViewRealm,
-            ],
+            &[Permissions::ManageRealm, Permissions::ManageClients],
         );
 
         Ok(has_permission)
     }
 
-    async fn can_create_realm(
+    async fn can_delete_client(
         &self,
         identity: Identity,
         target_realm: Realm,
@@ -45,13 +48,13 @@ impl RealmPolicy for FerriskeyPolicy {
 
         let has_permission = Permissions::has_one_of_permissions(
             &permissions.iter().cloned().collect::<Vec<Permissions>>(),
-            &[Permissions::ManageRealm, Permissions::ManageRealm],
+            &[Permissions::ManageRealm, Permissions::ManageClients],
         );
 
         Ok(has_permission)
     }
 
-    async fn can_update_realm(
+    async fn can_update_client(
         &self,
         identity: Identity,
         target_realm: Realm,
@@ -64,13 +67,13 @@ impl RealmPolicy for FerriskeyPolicy {
 
         let has_permission = Permissions::has_one_of_permissions(
             &permissions.iter().cloned().collect::<Vec<Permissions>>(),
-            &[Permissions::ManageRealm, Permissions::ManageRealm],
+            &[Permissions::ManageRealm, Permissions::ManageClients],
         );
 
         Ok(has_permission)
     }
 
-    async fn can_delete_realm(
+    async fn can_view_client(
         &self,
         identity: Identity,
         target_realm: Realm,
@@ -83,7 +86,7 @@ impl RealmPolicy for FerriskeyPolicy {
 
         let has_permission = Permissions::has_one_of_permissions(
             &permissions.iter().cloned().collect::<Vec<Permissions>>(),
-            &[Permissions::ManageRealm, Permissions::ManageRealm],
+            &[Permissions::ManageRealm, Permissions::ViewClients],
         );
 
         Ok(has_permission)
