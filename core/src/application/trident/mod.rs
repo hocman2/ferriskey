@@ -19,13 +19,7 @@ use crate::{
         },
         crypto::ports::HasherRepository,
         trident::{
-            entities::{
-                SigningAlgorithm, TotpSecret, WebAuthnAttestationConveyance,
-                WebAuthnAuthenticationExtensionsClientInputs, WebAuthnChallenge,
-                WebAuthnPubKeyCredParams, WebAuthnPublicKeyCredentialCreationOptions,
-                WebAuthnPublicKeyCredentialDescriptor, WebAuthnPublicKeyCredentialRequestOptions,
-                WebAuthnRelayingParty, WebAuthnUser, WebAuthnUserVerificationRequirement,
-            },
+            entities::TotpSecret,
             ports::{
                 BurnRecoveryCodeInput, BurnRecoveryCodeOutput, ChallengeOtpInput,
                 ChallengeOtpOutput, GenerateRecoveryCodeInput, GenerateRecoveryCodeOutput,
