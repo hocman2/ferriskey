@@ -313,6 +313,8 @@ impl TridentService for FerriskeyService {
         identity: Identity,
         input: WebAuthnPublicKeyCreateOptionsInput,
     ) -> Result<WebAuthnPublicKeyCreateOptionsOutput, CoreError> {
+        unimplemented!();
+        /*
         let challenge = WebAuthnChallenge::generate()?;
         let session_code =
             Uuid::parse_str(&input.session_code).map_err(|_| CoreError::SessionCreateError)?;
@@ -346,6 +348,7 @@ impl TridentService for FerriskeyService {
         };
 
         Ok(WebAuthnPublicKeyCreateOptionsOutput(creation_opts))
+        */
     }
 
     async fn webauthn_validate_public_key(
@@ -353,6 +356,8 @@ impl TridentService for FerriskeyService {
         identity: Identity,
         input: WebAuthnValidatePublicKeyInput,
     ) -> Result<WebAuthnValidatePublicKeyOutput, CoreError> {
+        unimplemented!();
+        /*
         if input.typ != "public-key" {
             return Err(CoreError::Invalid);
         }
@@ -368,6 +373,7 @@ impl TridentService for FerriskeyService {
             .map_err(|_| CoreError::InternalServerError)?;
 
         Ok(WebAuthnValidatePublicKeyOutput {})
+        */
     }
 
     async fn webauthn_public_key_request_options(
@@ -375,6 +381,8 @@ impl TridentService for FerriskeyService {
         identity: Identity,
         input: WebAuthnPublicKeyRequestOptionsInput,
     ) -> Result<WebAuthnPublicKeyRequestOptionsOutput, CoreError> {
+        unimplemented!();
+        /*
         let challenge = WebAuthnChallenge::generate()?;
         let session_code =
             Uuid::parse_str(&input.session_code).map_err(|_| CoreError::SessionCreateError)?;
@@ -410,6 +418,7 @@ impl TridentService for FerriskeyService {
         };
 
         Ok(WebAuthnPublicKeyRequestOptionsOutput(creation_opts))
+        */
     }
 
     async fn webauthn_public_key_authenticate(
@@ -417,6 +426,8 @@ impl TridentService for FerriskeyService {
         identity: Identity,
         input: WebAuthnPublicKeyAuthenticateInput,
     ) -> Result<WebAuthnPublicKeyAuthenticateOutput, CoreError> {
+        unimplemented!();
+        /*
         let session_code = input.session_code;
 
         let user = match identity {
@@ -465,6 +476,7 @@ impl TridentService for FerriskeyService {
         .await?;
 
         Ok(WebAuthnPublicKeyAuthenticateOutput { login_url })
+        */
     }
 
     async fn challenge_otp(

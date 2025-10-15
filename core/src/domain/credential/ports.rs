@@ -1,4 +1,5 @@
 use uuid::Uuid;
+use webauthn_rs::prelude::{CredentialID, RegisterPublicKeyCredential};
 
 use crate::domain::{
     authentication::value_objects::Identity,
@@ -7,9 +8,6 @@ use crate::domain::{
         Credential, CredentialError, CredentialOverview, DeleteCredentialInput, GetCredentialsInput,
     },
     crypto::entities::HashResult,
-    trident::entities::{
-        WebAuthnAuthenticatorAttestationResponse, WebAuthnCredentialId, WebAuthnCredentialIdGroup,
-    },
 };
 
 pub trait CredentialService: Clone + Send + Sync + 'static {
@@ -71,8 +69,7 @@ pub trait CredentialRepository: Clone + Send + Sync + 'static {
     fn create_webauthn_credential(
         &self,
         user_id: Uuid,
-        webauthn_credential_id: WebAuthnCredentialIdGroup,
-        attestation_response: WebAuthnAuthenticatorAttestationResponse,
+        webauthn_credential: RegisterPublicKeyCredential,
     ) -> impl Future<Output = Result<Credential, CredentialError>> + Send;
 
     fn get_webauthn_public_key_credentials(
@@ -82,6 +79,6 @@ pub trait CredentialRepository: Clone + Send + Sync + 'static {
 
     fn get_webauthn_credential_by_credential_id(
         &self,
-        webauthn_credential_id: WebAuthnCredentialId,
+        webauthn_credential_id: CredentialID,
     ) -> impl Future<Output = Result<Option<Credential>, CredentialError>> + Send;
 }
