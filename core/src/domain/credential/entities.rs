@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use utoipa::ToSchema;
 use uuid::Uuid;
-use webauthn_rs::prelude::{CredentialID, Passkey};
+use webauthn_rs::prelude::{Credential as WebAuthnCredential, CredentialID, Passkey};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Ord, PartialOrd)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Credential {
     pub id: Uuid,
     pub salt: Option<String>,
@@ -20,13 +20,13 @@ pub struct Credential {
     pub webauthn_credential_id: Option<CredentialID>,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd, ToSchema)]
 pub struct CredentialOverview {
     pub id: Uuid,
     pub user_id: Uuid,
     pub credential_type: String,
     pub user_label: Option<String>,
-    pub credential_data: CredentialData,
+    pub credential_data: CredentialDataOverview,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -38,7 +38,7 @@ impl From<Credential> for CredentialOverview {
             user_id: credential.user_id,
             credential_type: credential.credential_type,
             user_label: credential.user_label,
-            credential_data: credential.credential_data,
+            credential_data: credential.credential_data.into(),
             created_at: credential.created_at,
             updated_at: credential.updated_at,
         }
@@ -63,7 +63,8 @@ impl Credential {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+// for back-compat, maybe we should switch this to tagged in the future ?
 #[serde(untagged)]
 pub enum CredentialData {
     Hash {
@@ -71,7 +72,7 @@ pub enum CredentialData {
         algorithm: String,
     },
     WebAuthn {
-        passkey: Passkey,
+        credential: WebAuthnCredential,
     },
 }
 
@@ -84,7 +85,35 @@ impl CredentialData {
     }
 
     pub fn new_webauthn(passkey: Passkey) -> Self {
-        Self::WebAuthn { passkey }
+        Self::WebAuthn {
+            credential: passkey.into(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq, ToSchema)]
+pub enum CredentialDataOverview {
+    Hash {
+        hash_iterations: u32,
+        algorithm: String,
+    },
+    // It's not inherently risky to reveal WA credential data but it's a bit unusual...
+    // I'll leave it empty for now
+    WebAuthn,
+}
+
+impl From<CredentialData> for CredentialDataOverview {
+    fn from(data: CredentialData) -> Self {
+        match data {
+            CredentialData::Hash {
+                hash_iterations,
+                algorithm,
+            } => CredentialDataOverview::Hash {
+                hash_iterations,
+                algorithm,
+            },
+            CredentialData::WebAuthn { .. } => CredentialDataOverview::WebAuthn,
+        }
     }
 }
 
