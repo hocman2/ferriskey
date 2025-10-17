@@ -1,5 +1,5 @@
 use uuid::Uuid;
-use webauthn_rs::prelude::{CredentialID, RegisterPublicKeyCredential};
+use webauthn_rs::prelude::{CredentialID, Passkey};
 
 use crate::domain::{
     authentication::value_objects::Identity,
@@ -69,7 +69,7 @@ pub trait CredentialRepository: Clone + Send + Sync + 'static {
     fn create_webauthn_credential(
         &self,
         user_id: Uuid,
-        webauthn_credential: RegisterPublicKeyCredential,
+        webauthn_credential: Passkey,
     ) -> impl Future<Output = Result<Credential, CredentialError>> + Send;
 
     fn get_webauthn_public_key_credentials(

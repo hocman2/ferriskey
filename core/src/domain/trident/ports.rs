@@ -25,7 +25,11 @@ pub struct WebAuthnPublicKeyCreateOptionsInput {
 /// https://w3c.github.io/webauthn/#dictdef-publickeycredentialrpentity
 pub struct WebAuthnPublicKeyCreateOptionsOutput(pub CreationChallengeResponse);
 
-pub struct WebAuthnValidatePublicKeyInput(pub RegisterPublicKeyCredential);
+pub struct WebAuthnValidatePublicKeyInput {
+    pub server_host: String,
+    pub session_code: String,
+    pub credential: RegisterPublicKeyCredential,
+}
 pub struct WebAuthnValidatePublicKeyOutput {}
 
 pub struct WebAuthnPublicKeyRequestOptionsInput {
@@ -150,7 +154,7 @@ pub trait TridentService: Send + Sync + Clone + 'static {
         identity: Identity,
         input: WebAuthnPublicKeyCreateOptionsInput,
     ) -> impl Future<Output = Result<WebAuthnPublicKeyCreateOptionsOutput, CoreError>> + Send;
-    fn webauthn_validate_public_key(
+    fn webauthn_public_key_create(
         &self,
         identity: Identity,
         input: WebAuthnValidatePublicKeyInput,
