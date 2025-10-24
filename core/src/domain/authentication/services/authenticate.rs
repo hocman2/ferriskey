@@ -7,20 +7,12 @@ use crate::domain::{
         },
         ports::{AuthSessionRepository, AuthenticatePort},
         value_objects::AuthenticationResult,
-        client::ports::ClientRepository,
-        common::{entities::app_errors::CoreError, generate_random_string},
-        credential::{entities::CredentialData, ports::CredentialRepository},
-        crypto::ports::HasherRepository,
-        jwt::{
-            entities::{ClaimsTyp, JwtClaim},
-            ports::JwtService,
-        },
-        realm::ports::RealmRepository,
-        user::{entities::RequiredAction, ports::UserRepository},
     },
-    client::ports::{ClientRepository, RedirectUriRepository},
-    common::{entities::app_errors::CoreError, generate_random_string, services::Service},
-    credential::ports::CredentialRepository,
+    client::ports::ClientRepository,
+    client::ports::RedirectUriRepository,
+    common::services::Service,
+    common::{entities::app_errors::CoreError, generate_random_string},
+    credential::{entities::CredentialData, ports::CredentialRepository},
     crypto::ports::HasherRepository,
     health::ports::HealthCheckRepository,
     jwt::{
@@ -30,10 +22,8 @@ use crate::domain::{
     realm::ports::RealmRepository,
     role::ports::RoleRepository,
     trident::ports::RecoveryCodeRepository,
-    user::{
-        entities::RequiredAction,
-        ports::{UserRepository, UserRequiredActionRepository, UserRoleRepository},
-    },
+    user::ports::{UserRequiredActionRepository, UserRoleRepository},
+    user::{entities::RequiredAction, ports::UserRepository},
     webhook::ports::{WebhookNotifierRepository, WebhookRepository},
 };
 
