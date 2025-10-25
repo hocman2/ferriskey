@@ -18,16 +18,13 @@ use crate::domain::{
         },
         ports::{
             CreateWebhookInput, DeleteWebhookInput, GetWebhookInput, GetWebhookSubscribersInput,
-            GetWebhooksInput, UpdateWebhookInput, WebhookNotifierRepository, WebhookPolicy,
-            WebhookRepository, WebhookService,
+            GetWebhooksInput, UpdateWebhookInput, WebhookPolicy, WebhookRepository, WebhookService,
         },
     },
 };
 
-pub mod webhook_notifier_service;
-
-impl<R, C, U, CR, H, AS, RU, RO, KS, UR, URA, HC, W, WN, RT, RC> WebhookService
-    for Service<R, C, U, CR, H, AS, RU, RO, KS, UR, URA, HC, W, WN, RT, RC>
+impl<R, C, U, CR, H, AS, RU, RO, KS, UR, URA, HC, W, RT, RC> WebhookService
+    for Service<R, C, U, CR, H, AS, RU, RO, KS, UR, URA, HC, W, RT, RC>
 where
     R: RealmRepository,
     C: ClientRepository,
@@ -42,7 +39,6 @@ where
     URA: UserRequiredActionRepository,
     HC: HealthCheckRepository,
     W: WebhookRepository,
-    WN: WebhookNotifierRepository,
     RT: RefreshTokenRepository,
     RC: RecoveryCodeRepository,
 {
@@ -67,8 +63,7 @@ where
         let webhooks = self
             .webhook_repository
             .fetch_webhooks_by_realm(realm_id)
-            .await
-            .map_err(|_| CoreError::InternalServerError)?;
+            .await?;
 
         Ok(webhooks)
     }
@@ -94,8 +89,7 @@ where
         let webhooks = self
             .webhook_repository
             .fetch_webhooks_by_subscriber(realm_id, input.subscriber)
-            .await
-            .map_err(|_| CoreError::InternalServerError)?;
+            .await?;
 
         Ok(webhooks)
     }
@@ -121,8 +115,7 @@ where
         let webhook = self
             .webhook_repository
             .get_webhook_by_id(input.webhook_id, realm_id)
-            .await
-            .map_err(|_| CoreError::InternalServerError)?;
+            .await?;
 
         Ok(webhook)
     }
@@ -155,18 +148,11 @@ where
                 input.endpoint,
                 input.subscribers,
             )
-            .await
-            .map_err(|_| CoreError::InternalServerError)?;
+            .await?;
 
-        let webhooks = self
-            .webhook_repository
-            .fetch_webhooks_by_subscriber(realm_id, WebhookTrigger::WebhookCreated)
-            .await
-            .map_err(|_| CoreError::InternalServerError)?;
-
-        self.webhook_notifier_repository
+        self.webhook_repository
             .notify(
-                webhooks,
+                realm_id,
                 WebhookPayload::new(
                     WebhookTrigger::WebhookCreated,
                     realm_id,
@@ -206,18 +192,11 @@ where
                 input.endpoint,
                 input.subscribers,
             )
-            .await
-            .map_err(|_| CoreError::InternalServerError)?;
+            .await?;
 
-        let webhooks = self
-            .webhook_repository
-            .fetch_webhooks_by_subscriber(realm_id, WebhookTrigger::WebhookCreated)
-            .await
-            .map_err(|_| CoreError::InternalServerError)?;
-
-        self.webhook_notifier_repository
+        self.webhook_repository
             .notify(
-                webhooks,
+                realm_id,
                 WebhookPayload::new(
                     WebhookTrigger::WebhookUpdated,
                     realm_id,
@@ -250,18 +229,11 @@ where
 
         self.webhook_repository
             .delete_webhook(input.webhook_id)
-            .await
-            .map_err(|_| CoreError::InternalServerError)?;
+            .await?;
 
-        let webhooks = self
-            .webhook_repository
-            .fetch_webhooks_by_subscriber(realm_id, WebhookTrigger::WebhookCreated)
-            .await
-            .map_err(|_| CoreError::InternalServerError)?;
-
-        self.webhook_notifier_repository
+        self.webhook_repository
             .notify(
-                webhooks,
+                realm_id,
                 WebhookPayload::<Uuid>::new(WebhookTrigger::WebhookDeleted, realm_id, None),
             )
             .await?;
