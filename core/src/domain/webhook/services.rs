@@ -1,5 +1,3 @@
-use uuid::Uuid;
-
 use crate::domain::{
     authentication::{ports::AuthSessionRepository, value_objects::Identity},
     client::ports::{ClientRepository, RedirectUriRepository},
@@ -227,6 +225,11 @@ where
             "insufficient permissions",
         )?;
 
+        let webhook = self
+            .webhook_repository
+            .get_webhook_by_id(realm_id, input.webhook_id)
+            .await?;
+
         self.webhook_repository
             .delete_webhook(input.webhook_id)
             .await?;
@@ -234,7 +237,7 @@ where
         self.webhook_repository
             .notify(
                 realm_id,
-                WebhookPayload::<Uuid>::new(WebhookTrigger::WebhookDeleted, realm_id, None),
+                WebhookPayload::new(WebhookTrigger::WebhookDeleted, realm_id, Some(webhook)),
             )
             .await?;
 

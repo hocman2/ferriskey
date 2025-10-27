@@ -14,7 +14,10 @@ use crate::domain::{
     },
     trident::ports::RecoveryCodeRepository,
     user::ports::{UserRepository, UserRequiredActionRepository, UserRoleRepository},
-    webhook::ports::WebhookRepository,
+    webhook::{
+        entities::{webhook_payload::WebhookPayload, webhook_trigger::WebhookTrigger},
+        ports::WebhookRepository,
+    },
 };
 
 impl<R, C, U, CR, H, AS, RU, RO, KS, UR, URA, HC, W, RT, RC> RoleService
@@ -49,15 +52,21 @@ where
             .map_err(|_| CoreError::InternalServerError)?
             .ok_or(CoreError::InternalServerError)?;
 
+        let realm_id = realm.id;
         ensure_policy(
             self.policy.can_delete_role(identity, realm).await,
             "insufficient permissions",
         )?;
 
-        self.role_repository
-            .delete_by_id(role_id)
-            .await
-            .map_err(|_| CoreError::InternalServerError)?;
+        let role = self.role_repository.get_by_id(role_id).await?;
+        self.role_repository.delete_by_id(role_id).await?;
+
+        self.webhook_repository
+            .notify(
+                realm_id,
+                WebhookPayload::new(WebhookTrigger::RoleDeleted, realm_id, Some(role)),
+            )
+            .await?;
 
         Ok(())
     }
@@ -123,6 +132,7 @@ where
             .map_err(|_| CoreError::InternalServerError)?
             .ok_or(CoreError::InternalServerError)?;
 
+        let realm_id = realm.id;
         ensure_policy(
             self.policy.can_update_role(identity, realm).await,
             "insufficient permissions",
@@ -139,6 +149,13 @@ where
             )
             .await
             .map_err(|_| CoreError::InternalServerError)?;
+
+        self.webhook_repository
+            .notify(
+                realm_id,
+                WebhookPayload::new(WebhookTrigger::RoleUpdated, realm_id, Some(role.clone())),
+            )
+            .await?;
 
         Ok(role)
     }
@@ -157,6 +174,8 @@ where
             .map_err(|_| CoreError::InternalServerError)?
             .ok_or(CoreError::InternalServerError)?;
 
+        let realm_id = realm.id;
+
         ensure_policy(
             self.policy.can_update_role(identity, realm).await,
             "insufficient permissions",
@@ -167,6 +186,17 @@ where
             .update_permissions_by_id(role_id, UpdateRolePermissionsRequest { permissions })
             .await
             .map_err(|_| CoreError::InternalServerError)?;
+
+        self.webhook_repository
+            .notify(
+                realm_id,
+                WebhookPayload::new(
+                    WebhookTrigger::RolePermissionUpdated,
+                    realm_id,
+                    Some(role.clone()),
+                ),
+            )
+            .await?;
 
         Ok(role)
     }
