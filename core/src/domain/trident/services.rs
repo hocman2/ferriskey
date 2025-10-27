@@ -42,7 +42,7 @@ use crate::{
             entities::RequiredAction,
             ports::{UserRepository, UserRequiredActionRepository, UserRoleRepository},
         },
-        webhook::ports::{WebhookNotifierRepository, WebhookRepository},
+        webhook::ports::WebhookRepository,
     },
     infrastructure::recovery_code::formatters::{
         B32Split4RecoveryCodeFormatter, RecoveryCodeFormat,
@@ -181,7 +181,7 @@ async fn store_auth_code_and_generate_login_url<AS: AuthSessionRepository>(
     ))
 }
 impl<R, C, U, CR, H, AS, RU, RO, KS, UR, URA, HC, W, WN, RT, RC> TridentService
-    for Service<R, C, U, CR, H, AS, RU, RO, KS, UR, URA, HC, W, WN, RT, RC>
+    for Service<R, C, U, CR, H, AS, RU, RO, KS, UR, URA, HC, W, RT, RC>
 where
     R: RealmRepository,
     C: ClientRepository,
@@ -196,7 +196,6 @@ where
     URA: UserRequiredActionRepository,
     HC: HealthCheckRepository,
     W: WebhookRepository,
-    WN: WebhookNotifierRepository,
     RT: RefreshTokenRepository,
     RC: RecoveryCodeRepository,
 {

@@ -22,13 +22,15 @@ use crate::domain::{
     realm::ports::RealmRepository,
     role::ports::RoleRepository,
     trident::ports::RecoveryCodeRepository,
-    user::ports::{UserRequiredActionRepository, UserRoleRepository},
-    user::{entities::RequiredAction, ports::UserRepository},
-    webhook::ports::{WebhookNotifierRepository, WebhookRepository},
+    user::{
+        entities::RequiredAction,
+        ports::{UserRepository, UserRequiredActionRepository, UserRoleRepository},
+    },
+    webhook::ports::WebhookRepository,
 };
 
-impl<R, C, U, CR, H, AS, RU, RO, KS, UR, URA, HC, W, WN, RT, RC> AuthenticatePort
-    for Service<R, C, U, CR, H, AS, RU, RO, KS, UR, URA, HC, W, WN, RT, RC>
+impl<R, C, U, CR, H, AS, RU, RO, KS, UR, URA, HC, W, RT, RC> AuthenticatePort
+    for Service<R, C, U, CR, H, AS, RU, RO, KS, UR, URA, HC, W, RT, RC>
 where
     R: RealmRepository,
     C: ClientRepository,
@@ -43,7 +45,6 @@ where
     URA: UserRequiredActionRepository,
     HC: HealthCheckRepository,
     W: WebhookRepository,
-    WN: WebhookNotifierRepository,
     RT: RefreshTokenRepository,
     RC: RecoveryCodeRepository,
 {

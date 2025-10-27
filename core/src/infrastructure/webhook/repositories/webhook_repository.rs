@@ -1,8 +1,15 @@
+use reqwest::Client;
+use serde::Serialize;
 use uuid::Uuid;
 
-use crate::domain::webhook::{
-    entities::{errors::WebhookError, webhook::Webhook, webhook_trigger::WebhookTrigger},
-    ports::WebhookRepository,
+use crate::domain::{
+    common::entities::app_errors::CoreError,
+    webhook::{
+        entities::{
+            webhook::Webhook, webhook_payload::WebhookPayload, webhook_trigger::WebhookTrigger,
+        },
+        ports::WebhookRepository,
+    },
 };
 
 use chrono::Utc;
@@ -28,21 +35,25 @@ use crate::entity::webhook_subscribers::Model as WebhookSubscriberModel;
 #[derive(Debug, Clone)]
 pub struct PostgresWebhookRepository {
     pub db: DatabaseConnection,
+    pub http_client: Client,
 }
 
 impl PostgresWebhookRepository {
     pub fn new(db: DatabaseConnection) -> Self {
-        Self { db }
+        Self {
+            db,
+            http_client: Client::new(),
+        }
     }
 }
 
 impl WebhookRepository for PostgresWebhookRepository {
-    async fn fetch_webhooks_by_realm(&self, realm_id: Uuid) -> Result<Vec<Webhook>, WebhookError> {
+    async fn fetch_webhooks_by_realm(&self, realm_id: Uuid) -> Result<Vec<Webhook>, CoreError> {
         let webhooks = WebhookEntity::find()
             .filter(WebhookColumn::RealmId.eq(realm_id))
             .all(&self.db)
             .await
-            .map_err(|_| WebhookError::InternalServerError)?
+            .map_err(|_| CoreError::InternalServerError)?
             .iter()
             .map(Webhook::from)
             .collect::<Vec<Webhook>>();
@@ -54,7 +65,7 @@ impl WebhookRepository for PostgresWebhookRepository {
         &self,
         realm_id: Uuid,
         subscriber: WebhookTrigger,
-    ) -> Result<Vec<Webhook>, WebhookError> {
+    ) -> Result<Vec<Webhook>, CoreError> {
         let webhooks = WebhookEntity::find()
             .join(
                 sea_orm::JoinType::InnerJoin,
@@ -66,7 +77,7 @@ impl WebhookRepository for PostgresWebhookRepository {
             .await
             .map_err(|e| {
                 error!("Failed to fetch webhooks by subscriber: {}", e);
-                WebhookError::InternalServerError
+                CoreError::InternalServerError
             })?
             .into_iter()
             .map(Webhook::from)
@@ -79,13 +90,13 @@ impl WebhookRepository for PostgresWebhookRepository {
         &self,
         webhook_id: Uuid,
         realm_id: Uuid,
-    ) -> Result<Option<Webhook>, WebhookError> {
+    ) -> Result<Option<Webhook>, CoreError> {
         let webhook = WebhookEntity::find()
             .filter(WebhookColumn::RealmId.eq(realm_id))
             .filter(WebhookColumn::Id.eq(webhook_id))
             .one(&self.db)
             .await
-            .map_err(|_| WebhookError::InternalServerError)?
+            .map_err(|_| CoreError::InternalServerError)?
             .map(Webhook::from);
 
         Ok(webhook)
@@ -98,7 +109,7 @@ impl WebhookRepository for PostgresWebhookRepository {
         description: Option<String>,
         endpoint: String,
         subscribers: Vec<WebhookTrigger>,
-    ) -> Result<Webhook, WebhookError> {
+    ) -> Result<Webhook, CoreError> {
         let (_, timestamp) = generate_timestamp();
         let subscription_id = Uuid::new_v7(timestamp);
 
@@ -117,7 +128,7 @@ impl WebhookRepository for PostgresWebhookRepository {
         .map(Webhook::from)
         .map_err(|e| {
             error!("Failed to create webhook: {}", e);
-            WebhookError::InternalServerError
+            CoreError::InternalServerError
         })?;
 
         let subscribers_model: Vec<WebhookSubscriberModel> =
@@ -130,13 +141,13 @@ impl WebhookRepository for PostgresWebhookRepository {
             }))
             .exec_with_returning_many(&self.db)
             .await
-            .map_err(|_| WebhookError::InternalServerError)?;
+            .map_err(|_| CoreError::InternalServerError)?;
 
         let subscribers: Vec<WebhookSubscriber> = subscribers_model
             .iter()
             .map(|value| value.clone().try_into())
             .collect::<Result<Vec<_>, _>>()
-            .map_err(|_| WebhookError::InternalServerError)?;
+            .map_err(|_| CoreError::InternalServerError)?;
 
         webhook.subscribers = subscribers;
         Ok(webhook)
@@ -148,7 +159,7 @@ impl WebhookRepository for PostgresWebhookRepository {
         description: Option<String>,
         endpoint: String,
         subscribers: Vec<WebhookTrigger>,
-    ) -> Result<Webhook, WebhookError> {
+    ) -> Result<Webhook, CoreError> {
         let mut webhook = WebhookEntity::update(WebhookActiveModel {
             name: Set(name),
             description: Set(description),
@@ -160,13 +171,13 @@ impl WebhookRepository for PostgresWebhookRepository {
         .exec(&self.db)
         .await
         .map(Webhook::from)
-        .map_err(|_| WebhookError::InternalServerError)?;
+        .map_err(|_| CoreError::InternalServerError)?;
 
         let _ = WebhookSubscriberEntity::delete_many()
             .filter(WebhookSubscriberColumn::WebhookId.eq(id))
             .exec(&self.db)
             .await
-            .map_err(|_| WebhookError::InternalServerError)?;
+            .map_err(|_| CoreError::InternalServerError)?;
 
         let mut derived_subscribers = Vec::new();
         for subscriber in subscribers {
@@ -185,21 +196,55 @@ impl WebhookRepository for PostgresWebhookRepository {
         let subscribers = WebhookSubscriberEntity::insert_many(derived_subscribers)
             .exec_with_returning_many(&self.db)
             .await
-            .map_err(|_| WebhookError::InternalServerError)?
+            .map_err(|_| CoreError::InternalServerError)?
             .iter()
             .map(|value| value.clone().try_into())
             .collect::<Result<Vec<_>, _>>()
-            .map_err(|_| WebhookError::InternalServerError)?;
+            .map_err(|_| CoreError::InternalServerError)?;
 
         webhook.subscribers = subscribers;
         Ok(webhook)
     }
 
-    async fn delete_webhook(&self, id: Uuid) -> Result<(), WebhookError> {
+    async fn delete_webhook(&self, id: Uuid) -> Result<(), CoreError> {
         let _ = WebhookEntity::delete_by_id(id)
             .exec(&self.db)
             .await
-            .map_err(|_| WebhookError::InternalServerError)?;
+            .map_err(|_| CoreError::InternalServerError)?;
+
+        Ok(())
+    }
+
+    async fn notify<T: Send + Sync + Serialize + Clone + 'static>(
+        &self,
+        realm_id: Uuid,
+        payload: WebhookPayload<T>,
+    ) -> Result<(), CoreError> {
+        let client = self.http_client.clone();
+        let webhooks = self
+            .fetch_webhooks_by_subscriber(realm_id, payload.event.clone())
+            .await;
+
+        tokio::spawn(async move {
+            match webhooks {
+                Ok(webhooks) => {
+                    for webhook in webhooks {
+                        let response = client
+                            .post(webhook.endpoint)
+                            .json(&payload.clone())
+                            .send()
+                            .await;
+
+                        if let Err(err) = response {
+                            error!("Webhook POST failed: {:?}", err);
+                        }
+                    }
+                }
+                Err(err) => {
+                    error!("Failed to fetch webhooks: {:?}", err);
+                }
+            }
+        });
 
         Ok(())
     }
