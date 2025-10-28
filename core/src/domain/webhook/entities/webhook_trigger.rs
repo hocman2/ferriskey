@@ -12,12 +12,12 @@ pub enum WebhookTrigger {
     UserUpdated,
     #[serde(rename = "user.deleted")]
     UserDeleted,
+    #[serde(rename = "user.role.assigned")]
+    UserRoleAssigned,
+    #[serde(rename = "user.role.unassigned")]
+    UserRoleUnassigned,
     #[serde(rename = "user.bulk_deleted")]
     UserBulkDeleted,
-    #[serde(rename = "user.assign.role")]
-    UserAssignRole,
-    #[serde(rename = "user.unassign.role")]
-    UserUnassignRole,
     #[serde(rename = "user.credentials.deleted")]
     UserDeleteCredentials,
     #[serde(rename = "auth.reset_password")]
@@ -42,6 +42,10 @@ pub enum WebhookTrigger {
     RoleCreated,
     #[serde(rename = "role.updated")]
     RoleUpdated,
+    #[serde(rename = "role.deleted")]
+    RoleDeleted,
+    #[serde(rename = "role.permission.updated")]
+    RolePermissionUpdated,
     #[serde(rename = "realm.created")]
     RealmCreated,
     #[serde(rename = "realm.updated")]
@@ -65,9 +69,9 @@ impl Display for WebhookTrigger {
             WebhookTrigger::UserUpdated => write!(f, "user.updated"),
             WebhookTrigger::UserDeleted => write!(f, "user.deleted"),
             WebhookTrigger::UserBulkDeleted => write!(f, "user.bulk_deleted"),
-            WebhookTrigger::UserAssignRole => write!(f, "user.assign.role"),
-            WebhookTrigger::UserUnassignRole => write!(f, "user.unassign.role"),
             WebhookTrigger::UserDeleteCredentials => write!(f, "user.credentials.deleted"),
+            WebhookTrigger::UserRoleAssigned => write!(f, "user.role.assigned"),
+            WebhookTrigger::UserRoleUnassigned => write!(f, "user.role.unassigned"),
             WebhookTrigger::AuthResetPassword => write!(f, "auth.reset_password"),
             WebhookTrigger::ClientCreated => write!(f, "client.created"),
             WebhookTrigger::ClientUpdated => write!(f, "client.updated"),
@@ -79,6 +83,8 @@ impl Display for WebhookTrigger {
             WebhookTrigger::RedirectUriDeleted => write!(f, "redirect_uri.deleted"),
             WebhookTrigger::RoleCreated => write!(f, "role.created"),
             WebhookTrigger::RoleUpdated => write!(f, "role.updated"),
+            WebhookTrigger::RolePermissionUpdated => write!(f, "role.permission.updated"),
+            WebhookTrigger::RoleDeleted => write!(f, "role.deleted"),
             WebhookTrigger::RealmCreated => write!(f, "realm.created"),
             WebhookTrigger::RealmUpdated => write!(f, "realm.updated"),
             WebhookTrigger::RealmDeleted => write!(f, "realm.deleted"),
@@ -99,9 +105,9 @@ impl TryFrom<String> for WebhookTrigger {
             "user.updated" => Ok(WebhookTrigger::UserUpdated),
             "user.deleted" => Ok(WebhookTrigger::UserDeleted),
             "user.bulk_deleted" => Ok(WebhookTrigger::UserBulkDeleted),
-            "user.assign.role" => Ok(WebhookTrigger::UserAssignRole),
-            "user.unassign.role" => Ok(WebhookTrigger::UserUnassignRole),
             "user.credentials.deleted" => Ok(WebhookTrigger::UserDeleteCredentials),
+            "user.role.assigned" => Ok(WebhookTrigger::UserRoleAssigned),
+            "user.role.unassigned" => Ok(WebhookTrigger::UserRoleUnassigned),
             "auth.reset_password" => Ok(WebhookTrigger::AuthResetPassword),
             "client.created" => Ok(WebhookTrigger::ClientCreated),
             "client.updated" => Ok(WebhookTrigger::ClientUpdated),
@@ -113,6 +119,8 @@ impl TryFrom<String> for WebhookTrigger {
             "redirect_uri.deleted" => Ok(WebhookTrigger::RedirectUriDeleted),
             "role.created" => Ok(WebhookTrigger::RoleCreated),
             "role.updated" => Ok(WebhookTrigger::RoleUpdated),
+            "role.permission.updated" => Ok(WebhookTrigger::RolePermissionUpdated),
+            "role.deleted" => Ok(WebhookTrigger::RoleDeleted),
             "realm.created" => Ok(WebhookTrigger::RealmCreated),
             "realm.updated" => Ok(WebhookTrigger::RealmUpdated),
             "realm.deleted" => Ok(WebhookTrigger::RealmDeleted),
