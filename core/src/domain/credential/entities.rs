@@ -72,7 +72,7 @@ pub enum CredentialData {
         algorithm: String,
     },
     WebAuthn {
-        credential: WebAuthnCredential,
+        credential: Box<WebAuthnCredential>,
     },
 }
 
@@ -86,7 +86,7 @@ impl CredentialData {
 
     pub fn new_webauthn(passkey: Passkey) -> Self {
         Self::WebAuthn {
-            credential: passkey.into(),
+            credential: Box::new(passkey.into()),
         }
     }
 }
