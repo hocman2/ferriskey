@@ -180,7 +180,7 @@ async fn store_auth_code_and_generate_login_url<AS: AuthSessionRepository>(
         auth_session.redirect_uri, authorization_code, current_state
     ))
 }
-impl<R, C, U, CR, H, AS, RU, RO, KS, UR, URA, HC, W, WN, RT, RC> TridentService
+impl<R, C, U, CR, H, AS, RU, RO, KS, UR, URA, HC, W, RT, RC> TridentService
     for Service<R, C, U, CR, H, AS, RU, RO, KS, UR, URA, HC, W, RT, RC>
 where
     R: RealmRepository,
