@@ -54,7 +54,22 @@ export namespace Schemas {
     name: string
     permissions: Array<string>
   }
-  export type Realm = { created_at: string; id: string; name: string; updated_at: string }
+  export type RealmSetting = {
+    default_signing_algorithm?: (string | null) | undefined
+    forgot_password_enabled: boolean
+    id: string
+    realm_id: string
+    remember_me_enabled: boolean
+    updated_at: string
+    user_registration_enabled: boolean
+  }
+  export type Realm = {
+    created_at: string
+    id: string
+    name: string
+    settings?: (null | RealmSetting) | undefined
+    updated_at: string
+  }
   export type RequiredAction = 'configure_otp' | 'verify_email' | 'update_password'
   export type Role = {
     client?: (null | Client) | undefined
@@ -192,6 +207,11 @@ export namespace Schemas {
     token_type: string
   }
   export type OtpVerifyRequest = { code: string; label: string; secret: string }
+  export type RealmLoginSetting = {
+    forgot_password_enabled: boolean
+    remember_me_enabled: boolean
+    user_registration_enabled: boolean
+  }
   export type RedirectUri = {
     client_id: string
     created_at: string
@@ -200,6 +220,13 @@ export namespace Schemas {
     updated_at: string
     value: string
   }
+  export type RegistrationRequest = Partial<{
+    email: string
+    first_name: string | null
+    last_name: string | null
+    password: string
+    username: string
+  }>
   export type ResetPasswordResponse = { message: string; realm_name: string; user_id: string }
   export type ResetPasswordValidator = Partial<{
     credential_type: string
@@ -225,7 +252,12 @@ export namespace Schemas {
   }>
   export type UpdatePasswordRequest = Partial<{ value: string }>
   export type UpdatePasswordResponse = { message: string }
-  export type UpdateRealmSettingValidator = { default_signing_algorithm: string }
+  export type UpdateRealmSettingValidator = Partial<{
+    default_signing_algorithm: string | null
+    forgot_password_enabled: boolean | null
+    remember_me_enabled: boolean | null
+    user_registration_enabled: boolean | null
+  }>
   export type UpdateRealmValidator = { name: string }
   export type UpdateRedirectUriValidator = Partial<{ enabled: boolean }>
   export type UpdateRolePermissionsResponse = { data: Role }
@@ -289,6 +321,15 @@ export namespace Endpoints {
       path: { name: string }
     }
     response: Schemas.DeleteRealmResponse
+  }
+  export type get_Get_login_realm_settings_handler = {
+    method: 'GET'
+    path: '/realms/{name}/login-settings'
+    requestFormat: 'json'
+    parameters: {
+      path: { name: string }
+    }
+    response: Schemas.RealmLoginSetting
   }
   export type put_Update_realm_setting = {
     method: 'PUT'
@@ -508,6 +549,17 @@ export namespace Endpoints {
       path: { realm_name: string }
     }
     response: Schemas.GetCertsResponse
+  }
+  export type post_Registration_handler = {
+    method: 'POST'
+    path: '/realms/{realm_name}/protocol/openid-connect/registrations'
+    requestFormat: 'json'
+    parameters: {
+      path: { realm_name: string }
+
+      body: Schemas.RegistrationRequest
+    }
+    response: Schemas.JwtToken
   }
   export type post_Exchange_token = {
     method: 'POST'
@@ -754,6 +806,7 @@ export type EndpointByMethod = {
     '/realms/{realm_name}/login-actions/generate-recovery-codes': Endpoints.post_Generate_recovery_codes
     '/realms/{realm_name}/login-actions/update-password': Endpoints.post_Update_password
     '/realms/{realm_name}/login-actions/verify-otp': Endpoints.post_Verify_otp
+    '/realms/{realm_name}/protocol/openid-connect/registrations': Endpoints.post_Registration_handler
     '/realms/{realm_name}/protocol/openid-connect/token': Endpoints.post_Exchange_token
     '/realms/{realm_name}/users': Endpoints.post_Create_user
     '/realms/{realm_name}/users/{user_id}/roles/{role_id}': Endpoints.post_Assign_role
@@ -761,6 +814,7 @@ export type EndpointByMethod = {
   }
   get: {
     '/realms/{name}': Endpoints.get_Get_realm
+    '/realms/{name}/login-settings': Endpoints.get_Get_login_realm_settings_handler
     '/realms/{realm_name}/.well-known/openid-configuration': Endpoints.get_Get_openid_configuration
     '/realms/{realm_name}/clients': Endpoints.get_Get_clients
     '/realms/{realm_name}/clients/{client_id}': Endpoints.get_Get_client
