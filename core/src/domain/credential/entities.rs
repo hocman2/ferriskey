@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 use thiserror::Error;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -8,7 +9,7 @@ use uuid::Uuid;
 pub struct Credential {
     pub id: Uuid,
     pub salt: Option<String>,
-    pub credential_type: String,
+    pub credential_type: CredentialType,
     pub user_id: Uuid,
     pub user_label: Option<String>,
     pub secret_data: String,
@@ -16,6 +17,45 @@ pub struct Credential {
     pub temporary: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Ord, PartialOrd)]
+pub enum CredentialType {
+    Password,
+    Otp,
+    RecoveryCode,
+}
+
+impl Display for CredentialType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            CredentialType::Password => "password",
+            CredentialType::Otp => "otp",
+            CredentialType::RecoveryCode => "recovery-code",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl From<String> for CredentialType {
+    fn from(s: String) -> Self {
+        match s.as_str() {
+            "password" => CredentialType::Password,
+            "otp" => CredentialType::Otp,
+            "recovery-code" => CredentialType::RecoveryCode,
+            _ => CredentialType::Password, // default to Password if unknown
+        }
+    }
+}
+
+impl CredentialType {
+    pub fn as_str(&self) -> &str {
+        match self {
+            CredentialType::Password => "password",
+            CredentialType::Otp => "otp",
+            CredentialType::RecoveryCode => "recovery-code",
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq)]
@@ -34,7 +74,7 @@ impl From<Credential> for CredentialOverview {
         Self {
             id: credential.id,
             user_id: credential.user_id,
-            credential_type: credential.credential_type,
+            credential_type: credential.credential_type.to_string(),
             user_label: credential.user_label,
             credential_data: credential.credential_data,
             created_at: credential.created_at,
@@ -48,7 +88,7 @@ impl Credential {
         Self {
             id: config.id,
             salt: config.salt,
-            credential_type: config.credential_type,
+            credential_type: config.credential_type.into(),
             user_id: config.user_id,
             user_label: config.user_label,
             secret_data: config.secret_data,
