@@ -17,7 +17,7 @@ use crate::{
         client::ports::{ClientRepository, RedirectUriRepository},
         common::{entities::app_errors::CoreError, generate_random_string, services::Service},
         credential::{
-            entities::{Credential, CredentialData},
+            entities::{Credential, CredentialData, CredentialType},
             ports::CredentialRepository,
         },
         crypto::ports::HasherRepository,
@@ -294,7 +294,7 @@ where
 
         let recovery_code_creds = user_credentials
             .into_iter()
-            .filter(|cred| cred.credential_type == "recovery-code")
+            .filter(|cred| cred.credential_type == CredentialType::RecoveryCode)
             .collect::<Vec<Credential>>();
 
         // This is a suboptimal way to do it but I was having ownership errors
@@ -592,7 +592,7 @@ where
 
         let otp_credential = user_credentials
             .iter()
-            .find(|cred| cred.credential_type == "otp")
+            .find(|cred| cred.credential_type == CredentialType::Otp)
             .ok_or_else(|| {
                 CoreError::TotpVerificationFailed("user has not OTP configured".to_string())
             })?;
